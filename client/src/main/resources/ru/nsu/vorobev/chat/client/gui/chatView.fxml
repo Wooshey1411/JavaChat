@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" spacing="15.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.nsu.vorobev.chat.client.gui.ChatController">
+   <children>
+      <HBox prefHeight="315.0" prefWidth="600.0" spacing="10.0" VBox.vgrow="ALWAYS">
+         <children>
+            <TextArea fx:id="usersField" editable="false" prefHeight="310.0" prefWidth="150.0" HBox.hgrow="NEVER">
+               <HBox.margin>
+                  <Insets left="5.0" top="5.0" />
+               </HBox.margin>
+            </TextArea>
+            <TextArea fx:id="chatField" editable="false" prefHeight="310.0" prefWidth="437.0" text="Connection ready...&#10;" HBox.hgrow="ALWAYS">
+               <HBox.margin>
+                  <Insets right="5.0" top="5.0" />
+               </HBox.margin>
+            </TextArea>
+         </children>
+      </HBox>
+      <HBox prefHeight="79.0" prefWidth="600.0" spacing="15.0" VBox.vgrow="NEVER">
+         <children>
+            <TextArea fx:id="messageField" prefHeight="60.0" prefWidth="463.0" wrapText="true" HBox.hgrow="ALWAYS">
+               <HBox.margin>
+                  <Insets bottom="5.0" left="5.0" />
+               </HBox.margin>
+            </TextArea>
+            <Button mnemonicParsing="false" onAction="#OnButtonClick" prefHeight="47.0" prefWidth="121.0" text="Send" HBox.hgrow="NEVER">
+               <HBox.margin>
+                  <Insets right="5.0" top="10.0" />
+               </HBox.margin>
+            </Button>
+         </children>
+      </HBox>
+   </children>
+</VBox>
