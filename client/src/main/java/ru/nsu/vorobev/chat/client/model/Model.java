@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class Model implements TCPConnectionListener {
 
@@ -98,6 +99,9 @@ public class Model implements TCPConnectionListener {
             return;
         }
         if(o instanceof UserLogin){
+            if(Objects.equals(((UserLogin) o).getName(), name)){
+                return;
+            }
             usersList.add(((UserLogin) o).getName());
             msg = ((UserLogin) o).getName();
             listener.onModelChanged(EventHandle.USER_LOGIN);
@@ -144,13 +148,11 @@ public class Model implements TCPConnectionListener {
         Registration registrationAns;
         registrationAns = (Registration)tcpConnectionSerializable.getIn().readObject();
 
-        System.out.println(registrationAns.ID);
         if(!registrationAns.isSuccessful){
-         //   tcpConnectionSerializable.disconnect();
+            tcpConnectionSerializable.disconnect();
             throw new UserWithSameName("Exist user with same nickname");
         }
 
-        System.out.println(registrationAns.ID);
         ID = registrationAns.ID;
     }
 }

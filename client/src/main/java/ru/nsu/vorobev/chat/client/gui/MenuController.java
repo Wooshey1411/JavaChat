@@ -25,6 +25,10 @@ public class MenuController extends MenuView {
     @FXML
     private TextField nickField;
 
+    private boolean isNewWindowCreated = false;
+    private Stage newWindowStage;
+    private FXMLLoader newWindowLoader;
+
     public void setModel(Model model) {
         this.model = model;
         model.setListener(this);
@@ -32,6 +36,24 @@ public class MenuController extends MenuView {
 
     @FXML
     protected void OnBtnClick() throws IOException {
+
+        if(!isNewWindowCreated){
+            newWindowLoader = new FXMLLoader(Objects.requireNonNull(Menu.class.getResource("chatView.fxml")));
+            Parent root = newWindowLoader.load();
+            newWindowStage = new Stage();
+            newWindowStage.setTitle("Чат");
+            newWindowStage.setResizable(true); // wow! It's resizable
+            newWindowStage.setScene(new Scene(root,600,400));
+
+            newWindowStage.setOnCloseRequest(windowEvent -> {
+                model.close();
+                Platform.exit();
+            });
+            isNewWindowCreated = true;
+        }
+
+
+
         String ip = ipField.getText();
         if (ip.chars().filter(c -> c == '.').count() != 3) {
             model.sendEvent(EventHandle.BAD_IP_INPUT);
@@ -88,22 +110,11 @@ public class MenuController extends MenuView {
             return;
         }
 
-        FXMLLoader loader = new FXMLLoader(Objects.requireNonNull(Menu.class.getResource("chatView.fxml")));
-        Parent root = loader.load();
-        Stage stage = new Stage();
-        stage.setTitle("Чат");
-        stage.setResizable(true); // wow! It's resizable
-        stage.setScene(new Scene(root,600,400));
-        ((ChatController)loader.getController()).setModel(model);
-        stage.show();
-        stage.setOnCloseRequest(windowEvent -> {
-            model.close();
-            Platform.exit();
-        });
+        ((ChatController)(newWindowLoader.getController())).setModel(model);
+        newWindowStage.show();
+
         Stage stageM = (Stage) nickField.getScene().getWindow();
         stageM.close();
-
-
         model.usersListRequest();
         System.out.println("Open chat");
     }

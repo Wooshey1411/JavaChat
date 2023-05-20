@@ -15,7 +15,10 @@ public class ChatServer implements TCPConnectionListener {
 
     private static final int port = 8377;
     private static int ID = 0;
+
     private final List<User> users = new ArrayList<>();
+
+    private final List<Message> messagesHistory = new ArrayList<>();
 
     public static void main(String[] args) {
         new ChatServer();
@@ -48,8 +51,10 @@ public class ChatServer implements TCPConnectionListener {
                 break;
             }
         }
-
         broadCastMessage(new UserLogin(name));
+        for (Message msg : messagesHistory){
+            tcpConnectionSerializable.sendData(msg);
+        }
     }
 
     @Override
@@ -72,6 +77,11 @@ public class ChatServer implements TCPConnectionListener {
                 return;
             }
             tcpConnectionSerializable.sendData(new MessageAns(true,null));
+            int maxHistoryLen = 5;
+            if(messagesHistory.size() == maxHistoryLen){
+                messagesHistory.remove(0);
+            }
+            messagesHistory.add(BCMessage);
             broadCastMessage(BCMessage);
             return;
         }

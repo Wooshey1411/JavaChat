@@ -15,7 +15,7 @@
                   <Insets left="5.0" top="5.0" />
                </HBox.margin>
             </TextArea>
-            <TextArea fx:id="chatField" editable="false" prefHeight="310.0" prefWidth="437.0" text="Connection ready...&#10;" HBox.hgrow="ALWAYS">
+            <TextArea fx:id="chatField" editable="false" prefHeight="310.0" prefWidth="437.0" HBox.hgrow="ALWAYS">
                <HBox.margin>
                   <Insets right="5.0" top="5.0" />
                </HBox.margin>
