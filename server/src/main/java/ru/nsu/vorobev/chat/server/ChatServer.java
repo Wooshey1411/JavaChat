@@ -26,31 +26,38 @@ public class ChatServer implements TCPConnectionListener {
 
     private ChatServer() {
         System.out.println("Server running...");
+        Log.enableLogger();
+        Log.init();
+        Log.log(Log.getTime() + ":Server start working",Log.TypeOfLoggers.INFO);
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             while (true) {
                 try {
                     new TCPConnectionSerializable(this, serverSocket.accept());
                 } catch (IOException ex) {
-                    System.out.println("TCPConnection exception: " + ex);
+                    Log.log(Log.getTime() + ":TCPConnection exception:" + ex,Log.TypeOfLoggers.ERROR);
                 }
                 catch (UserWithSameName ignored){}
 
             }
         } catch (IOException ex) {
+            Log.log(Log.getTime() + ":Server socket error! Server shutdown... exception:" + ex, Log.TypeOfLoggers.ERROR);
             throw new RuntimeException(ex);
         }
     }
 
     @Override
     public synchronized void onConnectionReady(TCPConnectionSerializable tcpConnectionSerializable) {
-        System.out.println("Client connected: " + tcpConnectionSerializable);
+
         String name = null;
+        int ID = -1;
         for (User user : users){
             if(user.getConnection() == tcpConnectionSerializable){
                 name = user.getNickname();
+                ID = user.getID();
                 break;
             }
         }
+        Log.log(Log.getTime() + ":Client connected. Nickname:" +name + " ID=" + ID, Log.TypeOfLoggers.INFO);
         broadCastMessage(new UserLogin(name));
         for (Message msg : messagesHistory){
             tcpConnectionSerializable.sendData(msg);
@@ -70,10 +77,12 @@ public class ChatServer implements TCPConnectionListener {
             }
             if(sender == null){
                 tcpConnectionSerializable.sendData(new MessageAns(false, "Bad ID"));
+                Log.log(Log.getTime() + ":Client try to send message with nonexistent ID. TCPConnection:" + tcpConnectionSerializable,Log.TypeOfLoggers.INFO);
                 return;
             }
             if(((Message) obj).getMessage() == null){
                 tcpConnectionSerializable.sendData(new MessageAns(false, "Null string"));
+                Log.log(Log.getTime() + ":Client try to send message with NULL string. ID=" + sender.getID(),Log.TypeOfLoggers.INFO);
                 return;
             }
             tcpConnectionSerializable.sendData(new MessageAns(true,null));
@@ -83,6 +92,7 @@ public class ChatServer implements TCPConnectionListener {
             }
             messagesHistory.add(BCMessage);
             broadCastMessage(BCMessage);
+            Log.log(Log.getTime() + ":Client " + sender.getNickname() + " with ID=" + sender.getID() + " send message \"" + BCMessage.getMessage() + "\"",Log.TypeOfLoggers.INFO);
             return;
         }
         if(obj instanceof NamesReq){
@@ -94,14 +104,15 @@ public class ChatServer implements TCPConnectionListener {
             }
             if(sender == null){
                 tcpConnectionSerializable.sendData(new NamesAns(false, "Bad ID"));
+                Log.log(Log.getTime() + ":Client send request of names with nonexistent ID. TCPConnection:" + tcpConnectionSerializable,Log.TypeOfLoggers.INFO);
                 return;
             }
             NamesAns ans = new NamesAns(true,null);
             for (User user : users){
-                System.out.println(user.getNickname());
                 ans.addName(user.getNickname());
             }
             tcpConnectionSerializable.sendData(ans);
+            Log.log(Log.getTime() + ":Client " + sender.getNickname() + " with ID=" + sender.getID() + " send request of names successfully",Log.TypeOfLoggers.INFO);
         }
 
 
@@ -117,13 +128,13 @@ public class ChatServer implements TCPConnectionListener {
                 break;
             }
         }
-        System.out.println("Client disconnected: " + tcpConnectionSerializable);
+        Log.log(Log.getTime() + ":Client disconnected. Nickname:" +name,Log.TypeOfLoggers.INFO);
         broadCastMessage(new UserLogout(name));
     }
 
     @Override
     public synchronized void onException(TCPConnectionSerializable tcpConnectionSerializable, Exception ex) {
-        System.out.println("TCPConnection exception: " + ex);
+        Log.log(Log.getTime() + ":" + ex, Log.TypeOfLoggers.WARNING);
     }
 
     @Override
@@ -132,26 +143,25 @@ public class ChatServer implements TCPConnectionListener {
         registrationReceive = (Registration) tcpConnectionSerializable.getIn().readObject();
 
         //System.out.println(registrationReceive.msg);
-        Registration registrationAns = new Registration();
-        registrationAns.ID = ID++;
-        registrationAns.isSuccessful = true;
+        Registration registrationAns = new Registration(true,ID++,null);
         for (User user : users){
-            if(Objects.equals(user.getNickname(), registrationReceive.msg)){
-                registrationAns.isSuccessful = false;
-                registrationAns.msg = "Exist user with same name";
+            if(Objects.equals(user.getNickname(), registrationReceive.getMsg())){
+                registrationAns.setSuccessful(false);
+                registrationAns.setMsg("Exist user with same name");
                 break;
             }
         }
         tcpConnectionSerializable.getOut().writeObject(registrationAns);
         tcpConnectionSerializable.getOut().flush();
-        if(!registrationAns.isSuccessful){
+        if(!registrationAns.isSuccessful()){
+            Log.log(Log.getTime() + ":Client try to connect with exist nickname connection was closed. Nickname:" + registrationReceive.getMsg(),Log.TypeOfLoggers.INFO);
             throw new UserWithSameName("Exist user with same name");
         }
-        users.add(new User(tcpConnectionSerializable, registrationReceive.msg,registrationAns.ID));
+        users.add(new User(tcpConnectionSerializable, registrationReceive.getMsg(),registrationAns.getID()));
     }
 
     private void broadCastMessage(Object object) {
-        System.out.println("Broadcast: " + object.toString());
+      //  System.out.println("Broadcast: " + object.toString());
         for (User user : users) {
             user.getConnection().sendData(object);
         }

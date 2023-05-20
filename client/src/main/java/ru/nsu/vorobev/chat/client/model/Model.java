@@ -51,10 +51,6 @@ public class Model implements TCPConnectionListener {
         listener.onModelChanged(handle);
     }
 
-    public String getName() {
-        return name;
-    }
-
     public void sendMsg(String msg){
         connection.sendData(new Message(msg, ID,null));
     }
@@ -139,8 +135,7 @@ public class Model implements TCPConnectionListener {
 
     @Override
     public void onRegistration(TCPConnectionSerializable tcpConnectionSerializable) throws IOException, ClassNotFoundException {
-        Registration registrationReq = new Registration();
-        registrationReq.msg=name;
+        Registration registrationReq = new Registration(false,-1,name);
 
         tcpConnectionSerializable.getOut().writeObject(registrationReq);
         tcpConnectionSerializable.getOut().flush();
@@ -148,11 +143,11 @@ public class Model implements TCPConnectionListener {
         Registration registrationAns;
         registrationAns = (Registration)tcpConnectionSerializable.getIn().readObject();
 
-        if(!registrationAns.isSuccessful){
+        if(!registrationAns.isSuccessful()){
             tcpConnectionSerializable.disconnect();
             throw new UserWithSameName("Exist user with same nickname");
         }
 
-        ID = registrationAns.ID;
+        ID = registrationAns.getID();
     }
 }

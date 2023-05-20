@@ -6,9 +6,33 @@ import java.io.Serializable;
 public class Registration implements Serializable {
     @Serial
     private static final long serialVersionUID = 2;
-    public Registration(){}
+    public Registration(boolean isSuccessful, int ID, String msg){
+        this.isSuccessful = isSuccessful;
+        this.ID = ID;
+        this.msg = msg;
+    }
 
-    public String msg;
-    public int ID;
-    public boolean isSuccessful;
+    private String msg;
+    private final int ID;
+    private boolean isSuccessful;
+
+    public int getID() {
+        return ID;
+    }
+
+    public String getMsg() {
+        return msg;
+    }
+
+    public boolean isSuccessful() {
+        return isSuccessful;
+    }
+
+    public void setSuccessful(boolean successful) {
+        isSuccessful = successful;
+    }
+
+    public void setMsg(String msg) {
+        this.msg = msg;
+    }
 }
