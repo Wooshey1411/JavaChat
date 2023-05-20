@@ -15,7 +15,7 @@ public class Model implements TCPConnectionListener {
     private String ipAddress;
     private int port;
     private String name;
-
+    private int ID;
     private TCPConnectionSerializable connection;
 
     private ModelListener listener;
@@ -52,8 +52,13 @@ public class Model implements TCPConnectionListener {
         return name;
     }
 
-    public void sendMsg(Object o){
-        connection.sendData(new Message((String)o));
+    public void sendMsg(String msg){
+        connection.sendData(new Message(msg, true, ID));
+    }
+
+
+    public void usersListRequest(){
+
     }
 
 
@@ -64,7 +69,7 @@ public class Model implements TCPConnectionListener {
 
     @Override
     public void onReceiveData(TCPConnectionSerializable tcpConnectionSerializable, Object o) {
-        Message message = new Message("");
+        Message message = new Message("", true,ID);
         System.out.println("o= " + o.toString());
         message = (Message)o;
         listener.onModelReceived(message.getMessage());
@@ -91,16 +96,18 @@ public class Model implements TCPConnectionListener {
         registrationReq.msg=name;
 
         tcpConnectionSerializable.getOut().writeObject(registrationReq);
+        tcpConnectionSerializable.getOut().flush();
 
-        Registration registrationAns = new Registration();
+        Registration registrationAns;
         registrationAns = (Registration)tcpConnectionSerializable.getIn().readObject();
 
         System.out.println(registrationAns.ID);
         if(!registrationAns.isSuccessful){
-           // socket.close();
+         //   tcpConnectionSerializable.disconnect();
             throw new UserWithSameName("Exist user with same nickname");
         }
 
         System.out.println(registrationAns.ID);
+        ID = registrationAns.ID;
     }
 }

@@ -6,7 +6,7 @@ import java.net.SocketException;
 
 public class TCPConnectionSerializable {
     private final Socket socket;
-    private final Thread thread;
+    private Thread thread;
     private final TCPConnectionListener eventListener;
     private final ObjectInputStream in;
     private final ObjectOutputStream out;
@@ -25,14 +25,15 @@ public class TCPConnectionSerializable {
             eventListener.onRegistration(TCPConnectionSerializable.this);
         } catch (ClassNotFoundException ex){
             socket.close();
-            throw new SocketException("Bad registration input");
+            eventListener.onException(null, ex);
+            return;
         }
 
         thread = new Thread(new Runnable() {
             public void run() {
                 try {
                     eventListener.onConnectionReady(TCPConnectionSerializable.this);
-                    while (!thread.isInterrupted()) {
+                    while (thread != null && !thread.isInterrupted()) {
                         Object msg = in.readObject();
                         eventListener.onReceiveData(TCPConnectionSerializable.this, msg);
                     }
@@ -58,7 +59,9 @@ public class TCPConnectionSerializable {
     }
 
     public synchronized void disconnect(){
-        thread.interrupt();
+        if(thread != null) {
+            thread.interrupt();
+        }
         try {
             socket.close();
         } catch (IOException ex){

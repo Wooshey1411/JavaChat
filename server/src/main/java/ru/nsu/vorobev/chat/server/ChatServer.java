@@ -12,6 +12,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 
 public class ChatServer implements TCPConnectionListener {
@@ -35,6 +36,7 @@ public class ChatServer implements TCPConnectionListener {
                 } catch (IOException ex) {
                     System.out.println("TCPConnection exception: " + ex);
                 }
+                catch (UserWithSameName ignored){}
 
             }
         } catch (IOException ex) {
@@ -45,7 +47,7 @@ public class ChatServer implements TCPConnectionListener {
     @Override
     public synchronized void onConnectionReady(TCPConnectionSerializable tcpConnectionSerializable) {
         System.out.println("Client connected: " + tcpConnectionSerializable);
-        broadCastMessage(new Message("Client connected: " + tcpConnectionSerializable));
+        broadCastMessage(new Message("Client connected: " + tcpConnectionSerializable, true,0));
     }
 
     @Override
@@ -62,7 +64,7 @@ public class ChatServer implements TCPConnectionListener {
             }
         }
         System.out.println("Client disconnected: " + tcpConnectionSerializable);
-        broadCastMessage(new Message("Client disconnected: " + tcpConnectionSerializable));
+        broadCastMessage(new Message("Client disconnected: " + tcpConnectionSerializable, true,0));
     }
 
     @Override
@@ -72,15 +74,26 @@ public class ChatServer implements TCPConnectionListener {
 
     @Override
     public void onRegistration(TCPConnectionSerializable tcpConnectionSerializable) throws IOException, ClassNotFoundException {
-        Registration registrationReceive = new Registration();
+        Registration registrationReceive;
         registrationReceive = (Registration) tcpConnectionSerializable.getIn().readObject();
 
         System.out.println(registrationReceive.msg);
         Registration registrationAns = new Registration();
         registrationAns.ID = ID++;
         registrationAns.isSuccessful = true;
+        for (User user : users){
+            if(Objects.equals(user.getNickname(), registrationReceive.msg)){
+                registrationAns.isSuccessful = false;
+                registrationAns.msg = "Exist user with same name";
+                break;
+            }
+        }
         tcpConnectionSerializable.getOut().writeObject(registrationAns);
-        users.add(new User(tcpConnectionSerializable, registrationAns.msg,ID++));
+        tcpConnectionSerializable.getOut().flush();
+        if(!registrationAns.isSuccessful){
+            throw new UserWithSameName("Exist user with same name");
+        }
+        users.add(new User(tcpConnectionSerializable, registrationReceive.msg,registrationAns.ID));
     }
 
     private void broadCastMessage(Object object) {
