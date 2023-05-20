@@ -4,6 +4,7 @@ package ru.nsu.vorobev.chat.client.model;
 import ru.nsu.vorobev.chat.client.model.exceptions.SocketException;
 import ru.nsu.vorobev.chat.network.connection.*;
 import ru.nsu.vorobev.chat.network.protocols.Message;
+import ru.nsu.vorobev.chat.network.protocols.MessageAns;
 import ru.nsu.vorobev.chat.network.protocols.Registration;
 
 import java.io.IOException;
@@ -17,7 +18,7 @@ public class Model implements TCPConnectionListener {
     private String name;
     private int ID;
     private TCPConnectionSerializable connection;
-
+    private String error;
     private ModelListener listener;
 
     public void openConnection() {
@@ -53,7 +54,7 @@ public class Model implements TCPConnectionListener {
     }
 
     public void sendMsg(String msg){
-        connection.sendData(new Message(msg, true, ID));
+        connection.sendData(new Message(msg, ID,null));
     }
 
 
@@ -69,10 +70,25 @@ public class Model implements TCPConnectionListener {
 
     @Override
     public void onReceiveData(TCPConnectionSerializable tcpConnectionSerializable, Object o) {
-        Message message = new Message("", true,ID);
-        System.out.println("o= " + o.toString());
-        message = (Message)o;
-        listener.onModelReceived(message.getMessage());
+
+        if (o instanceof MessageAns){
+            if(!((MessageAns) o).isSuccessful()){
+                error = ((MessageAns) o).getReason();
+                listener.onModelChanged(EventHandle.MESSAGE_FAILED);
+            } else {
+                listener.onModelChanged(EventHandle.MESSAGE_SUCCESSFUL);
+            }
+            return;
+        }
+
+        if(o instanceof Message){
+            listener.onModelReceived(((Message) o).getName() + ": " + ((Message) o).getMessage());
+            return;
+        }
+    }
+
+    public String getError() {
+        return error;
     }
 
     @Override

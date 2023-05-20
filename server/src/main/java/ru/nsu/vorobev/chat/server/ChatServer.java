@@ -2,14 +2,12 @@ package ru.nsu.vorobev.chat.server;
 
 import ru.nsu.vorobev.chat.network.connection.*;
 import ru.nsu.vorobev.chat.network.protocols.Message;
+import ru.nsu.vorobev.chat.network.protocols.MessageAns;
 import ru.nsu.vorobev.chat.network.protocols.Registration;
 
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -19,8 +17,6 @@ public class ChatServer implements TCPConnectionListener {
 
     private static final int port = 8377;
     private static int ID = 0;
-
-    private final List<TCPConnectionSerializable> connections = new ArrayList<>();
     private final List<User> users = new ArrayList<>();
 
     public static void main(String[] args) {
@@ -47,12 +43,31 @@ public class ChatServer implements TCPConnectionListener {
     @Override
     public synchronized void onConnectionReady(TCPConnectionSerializable tcpConnectionSerializable) {
         System.out.println("Client connected: " + tcpConnectionSerializable);
-        broadCastMessage(new Message("Client connected: " + tcpConnectionSerializable, true,0));
+        broadCastMessage(new Message("Client connected: " + tcpConnectionSerializable,0,null));
     }
 
     @Override
     public synchronized void onReceiveData(TCPConnectionSerializable tcpConnectionSerializable, Object obj) {
-        broadCastMessage(obj);
+        if(obj instanceof Message){
+            Message BCMessage = null;
+            User sender = null;
+            for (User user : users){
+                if(user.getID() == ((Message) obj).getID()){
+                    sender = user;
+                    BCMessage = new Message(((Message) obj).getMessage(),-1,user.getNickname());
+                }
+            }
+            if(sender == null){
+                tcpConnectionSerializable.sendData(new MessageAns(false, "Bad ID"));
+                return;
+            }
+            if(((Message) obj).getMessage() == null){
+                tcpConnectionSerializable.sendData(new MessageAns(false, "Null string"));
+                return;
+            }
+            tcpConnectionSerializable.sendData(new MessageAns(true,null));
+            broadCastMessage(BCMessage);
+        }
     }
 
     @Override
@@ -64,7 +79,7 @@ public class ChatServer implements TCPConnectionListener {
             }
         }
         System.out.println("Client disconnected: " + tcpConnectionSerializable);
-        broadCastMessage(new Message("Client disconnected: " + tcpConnectionSerializable, true,0));
+        broadCastMessage(new Message("Client disconnected: " + tcpConnectionSerializable,0,null));
     }
 
     @Override

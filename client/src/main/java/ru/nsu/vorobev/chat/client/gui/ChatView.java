@@ -2,6 +2,8 @@ package ru.nsu.vorobev.chat.client.gui;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
 import ru.nsu.vorobev.chat.client.model.EventHandle;
 import ru.nsu.vorobev.chat.client.model.Model;
@@ -14,9 +16,30 @@ public class ChatView implements ModelListener {
     private TextArea chatField;
     @FXML
     private TextArea usersField;
+    @FXML
+    protected Button sendBtn;
+
+    @FXML
+    protected TextArea messageField;
+
+    private void makeAlert(String message){
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle("Warning Dialog");
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
     @Override
     public void onModelChanged(EventHandle handle) {
-
+        switch (handle){
+            case MESSAGE_SUCCESSFUL -> {
+                messageField.clear();
+                sendBtn.setDisable(false);
+            }
+            case MESSAGE_FAILED -> {
+                makeAlert(model.getError());
+                sendBtn.setDisable(false);
+            }
+        }
     }
 
     @Override

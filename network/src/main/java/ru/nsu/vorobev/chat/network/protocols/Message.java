@@ -6,14 +6,14 @@ import java.io.Serializable;
 public class Message implements Serializable {
     @Serial
     private static final long serialVersionUID = 5;
-    public Message(String message, boolean isSuccessful, int ID){
+    public Message(String message, int ID, String name){
+        this.name = name;
         this.message = message;
-        this.isSuccessful = isSuccessful;
         this.ID = ID;
     }
     private String message;
-    private boolean isSuccessful;
     private int ID;
+    private String name;
     public String getMessage() {
         return message;
     }
@@ -22,7 +22,7 @@ public class Message implements Serializable {
         return ID;
     }
 
-    public boolean isSuccessful() {
-        return isSuccessful;
+    public String getName() {
+        return name;
     }
 }

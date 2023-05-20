@@ -6,8 +6,6 @@ import ru.nsu.vorobev.chat.client.model.Model;
 
 public class ChatController extends ChatView {
 
-    @FXML
-    private TextArea messageField;
     public void setModel(Model model) {
         this.model = model;
         model.setListener(this);
@@ -20,8 +18,10 @@ public class ChatController extends ChatView {
             return;
         }
         String msg = messageField.getText();
-        messageField.clear();
-        model.sendMsg(model.getName() + ": " + msg);
+        sendBtn.setDisable(true);
+        //messageField.clear();
+
+        model.sendMsg(msg);
     }
 
 }
