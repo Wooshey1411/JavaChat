@@ -1,9 +1,7 @@
 package ru.nsu.vorobev.chat.server;
 
 import ru.nsu.vorobev.chat.network.connection.*;
-import ru.nsu.vorobev.chat.network.protocols.Message;
-import ru.nsu.vorobev.chat.network.protocols.MessageAns;
-import ru.nsu.vorobev.chat.network.protocols.Registration;
+import ru.nsu.vorobev.chat.network.protocols.*;
 
 
 import java.io.IOException;
@@ -43,7 +41,15 @@ public class ChatServer implements TCPConnectionListener {
     @Override
     public synchronized void onConnectionReady(TCPConnectionSerializable tcpConnectionSerializable) {
         System.out.println("Client connected: " + tcpConnectionSerializable);
-        broadCastMessage(new Message("Client connected: " + tcpConnectionSerializable,0,null));
+        String name = null;
+        for (User user : users){
+            if(user.getConnection() == tcpConnectionSerializable){
+                name = user.getNickname();
+                break;
+            }
+        }
+
+        broadCastMessage(new UserLogin(name));
     }
 
     @Override
@@ -67,19 +73,42 @@ public class ChatServer implements TCPConnectionListener {
             }
             tcpConnectionSerializable.sendData(new MessageAns(true,null));
             broadCastMessage(BCMessage);
+            return;
         }
+        if(obj instanceof NamesReq){
+            User sender = null;
+            for (User user : users){
+                if(user.getID() == ((NamesReq) obj).getID()){
+                    sender = user;
+                }
+            }
+            if(sender == null){
+                tcpConnectionSerializable.sendData(new NamesAns(false, "Bad ID"));
+                return;
+            }
+            NamesAns ans = new NamesAns(true,null);
+            for (User user : users){
+                System.out.println(user.getNickname());
+                ans.addName(user.getNickname());
+            }
+            tcpConnectionSerializable.sendData(ans);
+        }
+
+
     }
 
     @Override
     public synchronized void onDisconnect(TCPConnectionSerializable tcpConnectionSerializable) {
+        String name = null;
         for(User user : users){
             if (tcpConnectionSerializable == user.getConnection()){
+                name = user.getNickname();
                 users.remove(user);
                 break;
             }
         }
         System.out.println("Client disconnected: " + tcpConnectionSerializable);
-        broadCastMessage(new Message("Client disconnected: " + tcpConnectionSerializable,0,null));
+        broadCastMessage(new UserLogout(name));
     }
 
     @Override
@@ -92,7 +121,7 @@ public class ChatServer implements TCPConnectionListener {
         Registration registrationReceive;
         registrationReceive = (Registration) tcpConnectionSerializable.getIn().readObject();
 
-        System.out.println(registrationReceive.msg);
+        //System.out.println(registrationReceive.msg);
         Registration registrationAns = new Registration();
         registrationAns.ID = ID++;
         registrationAns.isSuccessful = true;

@@ -3,12 +3,12 @@ package ru.nsu.vorobev.chat.client.model;
 
 import ru.nsu.vorobev.chat.client.model.exceptions.SocketException;
 import ru.nsu.vorobev.chat.network.connection.*;
-import ru.nsu.vorobev.chat.network.protocols.Message;
-import ru.nsu.vorobev.chat.network.protocols.MessageAns;
-import ru.nsu.vorobev.chat.network.protocols.Registration;
+import ru.nsu.vorobev.chat.network.protocols.*;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Model implements TCPConnectionListener {
 
@@ -18,8 +18,9 @@ public class Model implements TCPConnectionListener {
     private String name;
     private int ID;
     private TCPConnectionSerializable connection;
-    private String error;
+    private String msg;
     private ModelListener listener;
+    private List<String> usersList = new ArrayList<>();
 
     public void openConnection() {
 
@@ -59,7 +60,7 @@ public class Model implements TCPConnectionListener {
 
 
     public void usersListRequest(){
-
+        connection.sendData(new NamesReq(ID));
     }
 
 
@@ -73,7 +74,7 @@ public class Model implements TCPConnectionListener {
 
         if (o instanceof MessageAns){
             if(!((MessageAns) o).isSuccessful()){
-                error = ((MessageAns) o).getReason();
+                msg = ((MessageAns) o).getReason();
                 listener.onModelChanged(EventHandle.MESSAGE_FAILED);
             } else {
                 listener.onModelChanged(EventHandle.MESSAGE_SUCCESSFUL);
@@ -85,10 +86,36 @@ public class Model implements TCPConnectionListener {
             listener.onModelReceived(((Message) o).getName() + ": " + ((Message) o).getMessage());
             return;
         }
+
+        if(o instanceof NamesAns){
+            if(!((NamesAns) o).isSuccessful()){
+                msg = ((NamesAns) o).getReason();
+                listener.onModelChanged(EventHandle.NAMES_REQ_FAILED);
+            } else {
+                usersList = ((NamesAns) o).getNames();
+                listener.onModelChanged(EventHandle.NAMES_REQ_SUCCESSFUL);
+            }
+            return;
+        }
+        if(o instanceof UserLogin){
+            usersList.add(((UserLogin) o).getName());
+            msg = ((UserLogin) o).getName();
+            listener.onModelChanged(EventHandle.USER_LOGIN);
+            return;
+        }
+        if(o instanceof UserLogout){
+            usersList.remove(((UserLogout) o).getName());
+            msg = ((UserLogout) o).getName();
+            listener.onModelChanged(EventHandle.USER_LOGOUT);
+        }
     }
 
-    public String getError() {
-        return error;
+    public String getMsg() {
+        return msg;
+    }
+
+    public List<String> getUsersList() {
+        return usersList;
     }
 
     @Override

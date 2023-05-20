@@ -104,7 +104,7 @@ public class MenuController extends MenuView {
         stageM.close();
 
 
-
+        model.usersListRequest();
         System.out.println("Open chat");
     }
 }

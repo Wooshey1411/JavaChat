@@ -28,6 +28,15 @@ public class ChatView implements ModelListener {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
+    void updateUsers(){
+        Platform.runLater(() -> {
+            usersField.clear();
+            for (String name : model.getUsersList()){
+                usersField.appendText(name + "\n");
+            }
+        });
+    }
     @Override
     public void onModelChanged(EventHandle handle) {
         switch (handle){
@@ -36,8 +45,18 @@ public class ChatView implements ModelListener {
                 sendBtn.setDisable(false);
             }
             case MESSAGE_FAILED -> {
-                makeAlert(model.getError());
+                makeAlert(model.getMsg());
                 sendBtn.setDisable(false);
+            }
+            case NAMES_REQ_FAILED -> makeAlert(model.getMsg());
+            case NAMES_REQ_SUCCESSFUL -> updateUsers();
+            case USER_LOGIN -> {
+                updateUsers();
+                Platform.runLater(() -> chatField.appendText("User " + model.getMsg() + " connected" + "\n"));
+            }
+            case USER_LOGOUT -> {
+                updateUsers();
+                Platform.runLater(() -> chatField.appendText("User " + model.getMsg() + " disconnected" + "\n"));
             }
         }
     }
