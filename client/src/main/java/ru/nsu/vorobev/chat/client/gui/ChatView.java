@@ -9,6 +9,8 @@ import ru.nsu.vorobev.chat.client.model.EventHandle;
 import ru.nsu.vorobev.chat.client.model.Model;
 import ru.nsu.vorobev.chat.client.model.ModelListener;
 
+import java.util.Objects;
+
 public class ChatView implements ModelListener {
 
     protected Model model;
@@ -33,6 +35,10 @@ public class ChatView implements ModelListener {
         Platform.runLater(() -> {
             usersField.clear();
             for (String name : model.getUsersList()){
+                if(Objects.equals(name, model.getName())){
+                    usersField.appendText(name + "(You)\n");
+                    continue;
+                }
                 usersField.appendText(name + "\n");
             }
         });

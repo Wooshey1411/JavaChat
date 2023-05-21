@@ -1,4 +1,4 @@
-package ru.nsu.vorobev.chat.server;
+package ru.nsu.vorobev.chat.server.protocolrealisation;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

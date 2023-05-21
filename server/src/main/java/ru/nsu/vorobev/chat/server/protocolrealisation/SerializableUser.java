@@ -1,13 +1,13 @@
-package ru.nsu.vorobev.chat.server;
+package ru.nsu.vorobev.chat.server.protocolrealisation;
 
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionSerializable;
 
-public class User {
+public class SerializableUser {
     private final TCPConnectionSerializable connection;
     private final String nickname;
     private final int ID;
 
-    public User(TCPConnectionSerializable connection, String nickname, int ID){
+    public SerializableUser(TCPConnectionSerializable connection, String nickname, int ID){
         this.connection = connection;
         this.nickname = nickname;
         this.ID = ID;
