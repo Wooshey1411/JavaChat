@@ -1,7 +1,6 @@
 package ru.nsu.vorobev.chat.client.gui;
 
 import javafx.fxml.FXML;
-import javafx.scene.control.TextArea;
 import ru.nsu.vorobev.chat.client.model.Model;
 
 public class ChatController extends ChatView {

@@ -2,31 +2,31 @@ package ru.nsu.vorobev.chat.client.model;
 
 
 import ru.nsu.vorobev.chat.client.model.exceptions.SocketException;
-import ru.nsu.vorobev.chat.network.connection.*;
-import ru.nsu.vorobev.chat.network.protocols.*;
+import ru.nsu.vorobev.chat.client.model.protocolrealisation.Connection;
+import ru.nsu.vorobev.chat.client.model.protocolrealisation.SerializableProtocol;
 
 import java.io.IOException;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
-public class Model implements TCPConnectionListener {
+public class Model {
 
     public static final int maxLengthOfName = 32;
     private String ipAddress;
     private int port;
     private String name;
     private int ID;
-    private TCPConnectionSerializable connection;
     private String msg;
     private ModelListener listener;
     private List<String> usersList = new ArrayList<>();
 
+    private Connection connection = new SerializableProtocol(this);
+
     public void openConnection() {
 
         try {
-            connection = new TCPConnectionSerializable(Model.this,new Socket(ipAddress,port));
+           // connection = new TCPConnectionSerializable(Model.this,new Socket(ipAddress,port));
+            connection.connect();
         } catch (IOException ex){
             throw new SocketException("Error during opening the socket",ex);
         }
@@ -52,64 +52,11 @@ public class Model implements TCPConnectionListener {
     }
 
     public void sendMsg(String msg){
-        connection.sendData(new Message(msg, ID,null));
+        connection.sendMsg(msg);
     }
-
-
     public void usersListRequest(){
-        connection.sendData(new NamesReq(ID));
+        connection.usersListRequest();
     }
-
-
-    @Override
-    public void onConnectionReady(TCPConnectionSerializable tcpConnectionSerializable) {
-        listener.onModelReceived("Connection ready...");
-    }
-
-    @Override
-    public void onReceiveData(TCPConnectionSerializable tcpConnectionSerializable, Object o) {
-
-        if (o instanceof MessageAns){
-            if(!((MessageAns) o).isSuccessful()){
-                msg = ((MessageAns) o).getReason();
-                listener.onModelChanged(EventHandle.MESSAGE_FAILED);
-            } else {
-                listener.onModelChanged(EventHandle.MESSAGE_SUCCESSFUL);
-            }
-            return;
-        }
-
-        if(o instanceof Message){
-            listener.onModelReceived(((Message) o).getName() + ": " + ((Message) o).getMessage());
-            return;
-        }
-
-        if(o instanceof NamesAns){
-            if(!((NamesAns) o).isSuccessful()){
-                msg = ((NamesAns) o).getReason();
-                listener.onModelChanged(EventHandle.NAMES_REQ_FAILED);
-            } else {
-                usersList = ((NamesAns) o).getNames();
-                listener.onModelChanged(EventHandle.NAMES_REQ_SUCCESSFUL);
-            }
-            return;
-        }
-        if(o instanceof UserLogin){
-            if(Objects.equals(((UserLogin) o).getName(), name)){
-                return;
-            }
-            usersList.add(((UserLogin) o).getName());
-            msg = ((UserLogin) o).getName();
-            listener.onModelChanged(EventHandle.USER_LOGIN);
-            return;
-        }
-        if(o instanceof UserLogout){
-            usersList.remove(((UserLogout) o).getName());
-            msg = ((UserLogout) o).getName();
-            listener.onModelChanged(EventHandle.USER_LOGOUT);
-        }
-    }
-
     public String getMsg() {
         return msg;
     }
@@ -118,36 +65,42 @@ public class Model implements TCPConnectionListener {
         return usersList;
     }
 
-    @Override
-    public void onDisconnect(TCPConnectionSerializable tcpConnectionSerializable) {
-        listener.onModelReceived("Connection closed");
-    }
-
-    @Override
-    public void onException(TCPConnectionSerializable tcpConnectionSerializable, Exception ex) {
-        listener.onModelReceived("Connection exception " + ex);
-    }
-
-
     public void close(){
         connection.disconnect();
     }
 
-    @Override
-    public void onRegistration(TCPConnectionSerializable tcpConnectionSerializable) throws IOException, ClassNotFoundException {
-        Registration registrationReq = new Registration(false,-1,name);
+    public void setMsg(String msg) {
+        this.msg = msg;
+    }
 
-        tcpConnectionSerializable.getOut().writeObject(registrationReq);
-        tcpConnectionSerializable.getOut().flush();
+    public void onModelChange(EventHandle handle){
+        listener.onModelChanged(handle);
+    }
+    public void onModelReceive(String msg){
+        listener.onModelReceived(msg);
+    }
 
-        Registration registrationAns;
-        registrationAns = (Registration)tcpConnectionSerializable.getIn().readObject();
+    public void setUsersList(List<String> usersList) {
+        this.usersList = usersList;
+    }
 
-        if(!registrationAns.isSuccessful()){
-            tcpConnectionSerializable.disconnect();
-            throw new UserWithSameName("Exist user with same nickname");
-        }
+    public String getName() {
+        return name;
+    }
 
-        ID = registrationAns.getID();
+    public void setID(int ID) {
+        this.ID = ID;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    public int getID() {
+        return ID;
     }
 }
