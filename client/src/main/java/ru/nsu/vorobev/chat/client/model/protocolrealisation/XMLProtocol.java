@@ -127,7 +127,18 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
 
     @Override
     public void disconnectRequest() {
+        Document doc = builder.newDocument();
 
+        Element rootElement = doc.createElement("command");
+        rootElement.setAttribute("name","logout");
+        doc.appendChild(rootElement);
+
+        Element session = doc.createElement("session");
+        session.setTextContent("" + model.getID());
+        rootElement.appendChild(session);
+        stringWriter.getBuffer().setLength(0);
+        writer.write(doc,lsOutput);
+        connection.sendData(stringWriter.toString());
     }
 
     @Override
@@ -155,6 +166,10 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                         model.onModelChange(EventHandle.NAMES_REQ_SUCCESSFUL);
                     }
                     case "message" -> model.onModelChange(EventHandle.MESSAGE_SUCCESSFUL);
+                    case "logout" -> {
+                        connection.disconnect();
+                        model.onModelChange(EventHandle.DISCONNECT);
+                    }
                 }
 
                 return;
@@ -176,6 +191,11 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                         model.onModelChange(EventHandle.NAMES_REQ_FAILED);
                     }
                     case "message" -> model.onModelChange(EventHandle.MESSAGE_FAILED);
+                    case "logout" -> {
+                        Element reasonElem = (Element) reqv.getElementsByTagName("reason").item(0);
+                        model.setError(reasonElem.getTextContent());
+                        model.onModelChange(EventHandle.ERROR);
+                    }
                 }
             }
 

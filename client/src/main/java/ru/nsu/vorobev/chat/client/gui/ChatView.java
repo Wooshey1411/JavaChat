@@ -74,8 +74,8 @@ public class ChatView implements ModelListener {
                     disconnectBtn.setDisable(true);
                     makeAlert("Disconnected");
                 });
-
             }
+            case ERROR -> Platform.runLater(() -> makeAlert(model.getError()));
         }
     }
 

@@ -119,7 +119,18 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
             Log.log(Log.getTime() + ":Client " + sender.getNickname() + " with ID=" + sender.getID() + " send request of names successfully",Log.TypeOfLoggers.INFO);
         }
         if(obj instanceof Disconnect){
-            tcpConnectionSerializable.sendData(new Disconnect(true,"null"));
+            int id = -1;
+            for (User user : users){
+                if(user.getID() == ((Disconnect) obj).getID()){
+                    id = user.getID();
+                    break;
+                }
+            }
+            if(id == -1){
+                tcpConnectionSerializable.sendData(new Disconnect(false,"Wrong session ID",0));
+                return;
+            }
+            tcpConnectionSerializable.sendData(new Disconnect(true,"null",0));
         }
 
     }

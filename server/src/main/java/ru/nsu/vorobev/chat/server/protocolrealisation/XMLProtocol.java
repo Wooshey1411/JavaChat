@@ -229,6 +229,14 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                     broadCastMessage(msg);
                     sendSuccess(tcpConnection, "message");
                 }
+                case "logout" ->{
+                    Element sessionElem = (Element) reqv.getElementsByTagName("session").item(0);
+                    int id = Integer.parseInt(sessionElem.getTextContent());
+                    if(checkIDAndSendIfWrong(tcpConnection,id,"logout","Wrong session ID")){
+                        return;
+                    }
+                    sendSuccess(tcpConnection,"logout");
+                }
             }
 
         } catch (IOException | SAXException ex) {

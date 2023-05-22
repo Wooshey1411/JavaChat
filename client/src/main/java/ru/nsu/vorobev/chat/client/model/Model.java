@@ -18,10 +18,11 @@ public class Model {
     private String name;
     private int ID;
     private String msg;
+    private String error;
     private ModelListener listener;
     private List<String> usersList = new ArrayList<>();
 
-    private Connection connection = new SerializableProtocol(this);
+    private Connection connection = new XMLProtocol(this);
 
     public void openConnection() {
 
@@ -107,5 +108,13 @@ public class Model {
 
     public void tryDisconnect(){
         connection.disconnectRequest();
+    }
+
+    public String getError() {
+        return error;
+    }
+
+    public void setError(String error) {
+        this.error = error;
     }
 }

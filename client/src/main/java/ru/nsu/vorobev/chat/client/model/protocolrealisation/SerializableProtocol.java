@@ -76,11 +76,15 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
             model.getUsersList().remove(((UserLogout) o).getName());
             model.setMsg(((UserLogout) o).getName());
             model.onModelChange(EventHandle.USER_LOGOUT);
+            return;
         }
         if(o instanceof Disconnect){
             if (((Disconnect) o).getSuccessful()){
                 connection.disconnect();
                 model.onModelChange(EventHandle.DISCONNECT);
+            } else {
+                model.setError(((Disconnect) o).getReason());
+                model.onModelChange(EventHandle.ERROR);
             }
         }
     }
@@ -122,7 +126,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
 
     @Override
     public void disconnectRequest() {
-        connection.sendData(new Disconnect(true,null));
+        connection.sendData(new Disconnect(true,null, model.getID()));
     }
 
 }

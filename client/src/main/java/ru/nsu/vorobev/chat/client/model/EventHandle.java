@@ -12,5 +12,6 @@ public enum EventHandle {
     NAMES_REQ_SUCCESSFUL,
     USER_LOGIN,
     USER_LOGOUT,
-    DISCONNECT
+    DISCONNECT,
+    ERROR
 }

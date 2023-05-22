@@ -9,7 +9,7 @@ public class ChatServer {
 
     private static final int port = 8377;
     public static void main(String[] args) {
-        Connection connection = new SerializableProtocol(port);
+        Connection connection = new XMLProtocol(port);
 
         connection.start();
     }

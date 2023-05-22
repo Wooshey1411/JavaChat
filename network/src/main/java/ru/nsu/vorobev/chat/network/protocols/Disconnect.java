@@ -7,12 +7,14 @@ public class Disconnect implements Serializable {
     @Serial
     private static final long serialVersionUID = 5;
 
-    public Disconnect(boolean isSuccessful, String reason){
+    public Disconnect(boolean isSuccessful, String reason, int ID){
         this.isSuccessful = isSuccessful;
         this.reason = reason;
+        this.ID = ID;
     }
     private final boolean isSuccessful;
     private final String reason;
+    private final int ID;
 
     public boolean getSuccessful() {
         return isSuccessful;
@@ -20,5 +22,8 @@ public class Disconnect implements Serializable {
 
     public String getReason() {
         return reason;
+    }
+    public int getID(){
+        return ID;
     }
 }
