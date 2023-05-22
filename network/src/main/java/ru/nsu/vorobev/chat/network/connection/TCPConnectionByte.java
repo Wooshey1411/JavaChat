@@ -14,8 +14,8 @@ public class TCPConnectionByte implements TCPConnection{
     private final Socket socket;
     private Thread thread;
     private final TCPConnectionListener eventListener;
-    private final BufferedInputStream in;
-    private final BufferedOutputStream out;
+    private final DataInputStream in;
+    private final DataOutputStream out;
     public TCPConnectionByte(TCPConnectionListener eventListener, String ip, int port) throws IOException {
         this(eventListener, new Socket(ip,port));
     }
@@ -23,9 +23,9 @@ public class TCPConnectionByte implements TCPConnection{
         this.eventListener = eventListener;
         this.socket = socket;
 
-        out = new BufferedOutputStream(socket.getOutputStream());
+        out = new DataOutputStream(socket.getOutputStream());
         out.flush();
-        in = new BufferedInputStream(socket.getInputStream());
+        in = new DataInputStream(socket.getInputStream());
 
         try {
             eventListener.onRegistration(TCPConnectionByte.this);
@@ -40,7 +40,11 @@ public class TCPConnectionByte implements TCPConnection{
                 try {
                     eventListener.onConnectionReady(TCPConnectionByte.this);
                     while (thread != null && !thread.isInterrupted()) {
-                        eventListener.onReceiveData(TCPConnectionByte.this, receiveData());
+                        String data = (String)receiveData();
+                            if(data == null){
+                                break;
+                            }
+                        eventListener.onReceiveData(TCPConnectionByte.this, data);
                     }
                 } catch (IOException ex){
                     eventListener.onException(TCPConnectionByte.this,ex);
@@ -53,9 +57,8 @@ public class TCPConnectionByte implements TCPConnection{
     }
 
     @Override
-    public synchronized void sendData(Object obj){
+    public void sendData(Object obj){
         try{
-
             ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES);
             buffer.putInt(((String)obj).length());
             buffer.rewind();
@@ -66,20 +69,24 @@ public class TCPConnectionByte implements TCPConnection{
             System.arraycopy(len,0,send,0,Integer.SIZE/8);
             System.arraycopy(msg,0,send,Integer.SIZE/8,msg.length);
             out.write(send);
-            out.flush();
+           // out.flush();
 
         } catch (IOException ex){
+            ex.printStackTrace();
             eventListener.onException(TCPConnectionByte.this,ex);
             disconnect();
         }
     }
 
     @Override
-    public synchronized Object receiveData() throws IOException {
+    public Object receiveData() throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES);
         buffer.put(in.readNBytes(Integer.BYTES));
         buffer.rewind();
         int len = buffer.getInt();
+        if(len <= 0){
+            return null;
+        }
         byte[] buff;
         buff = in.readNBytes(len);
         return new String(buff,StandardCharsets.UTF_8);
@@ -89,6 +96,12 @@ public class TCPConnectionByte implements TCPConnection{
     public synchronized void disconnect(){
         if(thread != null) {
             thread.interrupt();
+        }
+        try {
+            in.close();
+            out.close();
+        } catch (IOException ex){
+            ex.printStackTrace();
         }
         try {
             socket.close();

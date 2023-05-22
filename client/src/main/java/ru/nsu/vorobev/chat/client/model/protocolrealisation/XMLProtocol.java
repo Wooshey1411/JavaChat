@@ -10,6 +10,7 @@ import org.w3c.dom.ls.LSOutput;
 import org.w3c.dom.ls.LSSerializer;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+import ru.nsu.vorobev.chat.client.model.EventHandle;
 import ru.nsu.vorobev.chat.client.model.Model;
 import ru.nsu.vorobev.chat.network.connection.TCPConnection;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionByte;
@@ -25,6 +26,8 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class XMLProtocol implements TCPConnectionListener, Connection {
 
@@ -93,12 +96,52 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
 
     @Override
     public void usersListRequest() {
+        Document doc = builder.newDocument();
 
+        Element rootElement = doc.createElement("command");
+        rootElement.setAttribute("name","list");
+        doc.appendChild(rootElement);
+
+        Element session = doc.createElement("session");
+        session.setTextContent("" + model.getID());
+        rootElement.appendChild(session);
+        stringWriter.getBuffer().setLength(0);
+        writer.write(doc,lsOutput);
+        connection.sendData(stringWriter.toString());
     }
 
     @Override
     public void onReceiveData(TCPConnection tcpConnection, Object o) {
+        try {
+            Document reqv = builder.parse(new InputSource(new StringReader((String) o)));
+            Element reqvElement = (Element) reqv.getElementsByTagName("success").item(0);
+            if(reqvElement != null){
+                String name = reqvElement.getAttribute("name");
+                switch (name){
+                    case "list":
+                        Element listUsersElem = (Element) reqv.getElementsByTagName("listusers").item(0);
+                        if(listUsersElem == null){
+                            return;
+                        }
+                        NodeList nodeList = listUsersElem.getChildNodes();
+                        List<String> users = new ArrayList<>();
+                        for (int i = 0; i < nodeList.getLength(); i++) {
+                            if (nodeList.item(i).getNodeType() == Node.ELEMENT_NODE) {
+                                Element userName = (Element) nodeList.item(i).getFirstChild();
+                                users.add(userName.getTextContent());
+                            }
+                        }
+                        model.setUsersList(users);
+                        model.onModelChange(EventHandle.NAMES_REQ_SUCCESSFUL);
+                }
 
+            }
+
+
+
+        } catch (IOException | SAXException ex){
+            ex.printStackTrace();
+        }
     }
 
     @Override
