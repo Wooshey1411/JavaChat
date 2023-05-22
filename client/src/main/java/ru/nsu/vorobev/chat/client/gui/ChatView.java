@@ -20,6 +20,8 @@ public class ChatView implements ModelListener {
     private TextArea usersField;
     @FXML
     protected Button sendBtn;
+    @FXML
+    protected Button disconnectBtn;
 
     @FXML
     protected TextArea messageField;
@@ -63,6 +65,16 @@ public class ChatView implements ModelListener {
             case USER_LOGOUT -> {
                 updateUsers();
                 Platform.runLater(() -> chatField.appendText("User " + model.getMsg() + " disconnected" + "\n"));
+            }
+            case DISCONNECT -> {
+                Platform.runLater(() -> {
+                    usersField.clear();
+                    messageField.clear();
+                    sendBtn.setDisable(true);
+                    disconnectBtn.setDisable(true);
+                    makeAlert("Disconnected");
+                });
+
             }
         }
     }

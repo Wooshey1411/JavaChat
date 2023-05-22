@@ -126,6 +126,11 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
     }
 
     @Override
+    public void disconnectRequest() {
+
+    }
+
+    @Override
     public void onReceiveData(TCPConnection tcpConnection, Object o) {
         try {
             Document reqv = builder.parse(new InputSource(new StringReader((String) o)));
@@ -215,8 +220,6 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                 }
             }
 
-
-
         } catch (IOException | SAXException ex){
             ex.printStackTrace();
         }
@@ -235,7 +238,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         rootElement.appendChild(name);
 
         Element type = doc.createElement("type");
-        type.setTextContent(model.getName());
+        type.setTextContent("REGISTRATION");
         rootElement.appendChild(type);
         stringWriter.getBuffer().setLength(0);
         writer.write(doc,lsOutput);

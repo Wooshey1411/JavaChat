@@ -11,7 +11,6 @@ import org.w3c.dom.ls.LSSerializer;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import ru.nsu.vorobev.chat.network.connection.*;
-import ru.nsu.vorobev.chat.network.protocols.Message;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -19,7 +18,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.io.Writer;
 import java.net.ServerSocket;
 import java.net.SocketException;
 import java.util.ArrayList;
@@ -32,7 +30,8 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
 
     private final List<User> users = new ArrayList<>();
 
-    private final List<Message> messagesHistory = new ArrayList<>();
+    private final List<String> messagesHistory = new ArrayList<>();
+    static final int maxHistoryLen = 5;
 
     private final DocumentBuilder builder;
 
@@ -109,7 +108,9 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         stringWriter.getBuffer().setLength(0);
         writer.write(ans, lsOutput);
         broadCastMessage(stringWriter.toString());
-
+        for(String msg : messagesHistory){
+            tcpConnection.sendData(msg);
+        }
         System.out.println("User connected");
     }
 
@@ -220,7 +221,12 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                     rootElement.appendChild(nameElement);
                     stringWriter.getBuffer().setLength(0);
                     writer.write(BCMessage, lsOutput);
-                    broadCastMessage(stringWriter.toString());
+                    String msg = stringWriter.toString();
+                    if(messagesHistory.size() == maxHistoryLen){
+                        messagesHistory.remove(0);
+                    }
+                    messagesHistory.add(msg);
+                    broadCastMessage(msg);
                     sendSuccess(tcpConnection, "message");
                 }
             }

@@ -10,4 +10,6 @@ public interface Connection {
     void sendMsg(String msg);
 
     void usersListRequest();
+
+    void disconnectRequest();
 }

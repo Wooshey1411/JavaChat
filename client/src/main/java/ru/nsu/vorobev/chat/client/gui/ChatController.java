@@ -23,4 +23,8 @@ public class ChatController extends ChatView {
         model.sendMsg(msg);
     }
 
+    @FXML
+    protected void OnDisconnectBtnClick(){
+        model.tryDisconnect();
+    }
 }

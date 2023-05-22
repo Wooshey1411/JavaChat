@@ -21,7 +21,7 @@ public class Model {
     private ModelListener listener;
     private List<String> usersList = new ArrayList<>();
 
-    private Connection connection = new XMLProtocol(this);
+    private Connection connection = new SerializableProtocol(this);
 
     public void openConnection() {
 
@@ -103,5 +103,9 @@ public class Model {
 
     public int getID() {
         return ID;
+    }
+
+    public void tryDisconnect(){
+        connection.disconnectRequest();
     }
 }

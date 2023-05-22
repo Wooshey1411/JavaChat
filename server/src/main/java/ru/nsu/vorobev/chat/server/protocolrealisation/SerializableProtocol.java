@@ -17,6 +17,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     private static int ID = 0;
 
     private final List<User> users = new ArrayList<>();
+    static final int maxHistoryLen = 5;
 
     private final List<Message> messagesHistory = new ArrayList<>();
 
@@ -89,7 +90,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
                 return;
             }
             tcpConnectionSerializable.sendData(new MessageAns(true,null));
-            int maxHistoryLen = 5;
+
             if(messagesHistory.size() == maxHistoryLen){
                 messagesHistory.remove(0);
             }
@@ -117,7 +118,9 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
             tcpConnectionSerializable.sendData(ans);
             Log.log(Log.getTime() + ":Client " + sender.getNickname() + " with ID=" + sender.getID() + " send request of names successfully",Log.TypeOfLoggers.INFO);
         }
-
+        if(obj instanceof Disconnect){
+            tcpConnectionSerializable.sendData(new Disconnect(true,"null"));
+        }
 
     }
 
