@@ -16,6 +16,7 @@ import ru.nsu.vorobev.chat.network.connection.TCPConnection;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionByte;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionListener;
 import ru.nsu.vorobev.chat.network.connection.UserWithSameName;
+import ru.nsu.vorobev.chat.network.protocols.Message;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -91,7 +92,19 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
 
     @Override
     public void sendMsg(String msg) {
-
+        Document doc = builder.newDocument();
+        Element rootElement = doc.createElement("command");
+        rootElement.setAttribute("name","message");
+        doc.appendChild(rootElement);
+        Element messageElem = doc.createElement("message");
+        messageElem.setTextContent(msg);
+        Element sessionElem = doc.createElement("session");
+        sessionElem.setTextContent("" + model.getID());
+        rootElement.appendChild(messageElem);
+        rootElement.appendChild(sessionElem);
+        stringWriter.getBuffer().setLength(0);
+        writer.write(doc,lsOutput);
+        connection.sendData(stringWriter.toString());
     }
 
     @Override
@@ -133,8 +146,46 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                         }
                         model.setUsersList(users);
                         model.onModelChange(EventHandle.NAMES_REQ_SUCCESSFUL);
+                    case "message":
+                        model.onModelChange(EventHandle.MESSAGE_SUCCESSFUL);
                 }
 
+                return;
+            }
+
+
+            reqvElement = (Element) reqv.getElementsByTagName("error").item(0);
+            if(reqvElement != null) {
+                String name = reqvElement.getAttribute("name");
+                switch (name) {
+                    case "list":
+                        NodeList nodeList = reqvElement.getChildNodes();
+                        for (int i = 0; i < nodeList.getLength(); i++) {
+                            if (nodeList.item(i).getNodeType() == Node.ELEMENT_NODE) {
+                                model.setMsg(nodeList.item(i).getTextContent());
+                                break;
+                            }
+                        }
+                        model.onModelChange(EventHandle.NAMES_REQ_FAILED);
+                    case "message":
+                        model.onModelChange(EventHandle.MESSAGE_FAILED);
+
+                }
+            }
+
+            reqvElement = (Element) reqv.getElementsByTagName("event").item(0);
+            if(reqvElement != null){
+                String name = reqvElement.getAttribute("name");
+                switch (name){
+                    case "message":
+                        Element messageElem = (Element) reqv.getElementsByTagName("message").item(0);
+                        Element nameElem = (Element) reqv.getElementsByTagName("name").item(0);
+                        if(messageElem == null || nameElem == null){
+                            return;
+                        }
+                        model.onModelReceive(nameElem.getTextContent() + ": " + messageElem.getTextContent());
+
+                }
             }
 
 

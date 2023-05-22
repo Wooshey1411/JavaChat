@@ -83,12 +83,52 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         }
     }
 
+    private synchronized void broadCastMessage(String msg) {
+        //  System.out.println("Broadcast: " + object.toString());
+        for (User user : users) {
+            user.getConnection().sendData(msg);
+        }
+    }
 
     @Override
     public synchronized void onConnectionReady(TCPConnection tcpConnectionSerializable) {
         System.out.println("User connected");
     }
 
+    private synchronized boolean checkIDAndSendIfWrong(TCPConnection tcpConnection, int ID, String attribute, String reasonS){
+        Document ans = builder.newDocument();
+        boolean IDFound = false;
+        for (User user : users) {
+            if (user.getID() == ID) {
+                IDFound = true;
+                break;
+            }
+        }
+        if (!IDFound) {
+            Element rootElement = ans.createElement("error");
+            ans.appendChild(rootElement);
+            Element reason = ans.createElement("reason");
+            reason.setAttribute("name",attribute);
+            reason.setTextContent(reasonS);
+            rootElement.appendChild(reason);
+            stringWriter.getBuffer().setLength(0);
+            writer.write(ans, lsOutput);
+            tcpConnection.sendData(stringWriter.toString());
+            return true;
+        }
+        return false;
+    }
+
+    private synchronized void sendSuccess(TCPConnection tcpConnection, String attribute){
+        Document ans = builder.newDocument();
+        Element rootElement = ans.createElement("success");
+        rootElement.setAttribute("name", attribute);
+        ans.appendChild(rootElement);
+        stringWriter.getBuffer().setLength(0);
+        writer.write(ans, lsOutput);
+        String ansS = stringWriter.toString();
+        tcpConnection.sendData(ansS);
+    }
     @Override
     public synchronized void onReceiveData(TCPConnection tcpConnection, Object obj) {
 
@@ -107,33 +147,17 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                             break;
                         }
                     }
-                    Document ans = builder.newDocument();
-                    boolean IDFound = false;
-                    for (User user:users){
-                        if(user.getID() == ID){
-                            IDFound = true;
-                            break;
-                        }
-                    }
-                    if(!IDFound)
-                        {
-                            Element rootElement = ans.createElement("error");
-                            ans.appendChild(rootElement);
-                            Element reason = ans.createElement("reason");
-                            reason.setTextContent("wrong session ID for get list of users");
-                            rootElement.appendChild(reason);
-                            stringWriter.getBuffer().setLength(0);
-                            writer.write(ans, lsOutput);
-                            tcpConnection.sendData(stringWriter.toString());
-                            return;
-                        }
 
+                    if(checkIDAndSendIfWrong(tcpConnection,ID,"list","wrong session ID for get list of users")){
+                        return;
+                    }
+                    Document ans = builder.newDocument();
                     Element rootElement = ans.createElement("success");
-                    rootElement.setAttribute("name","list");
+                    rootElement.setAttribute("name", "list");
                     ans.appendChild(rootElement);
                     Element listusersElement = ans.createElement("listusers");
                     rootElement.appendChild(listusersElement);
-                    for (User user : users){
+                    for (User user : users) {
                         Element userElement = ans.createElement("user");
                         Element nameElement = ans.createElement("name");
                         nameElement.setTextContent(user.getNickname());
@@ -148,6 +172,42 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                     writer.write(ans, lsOutput);
                     String ansS = stringWriter.toString();
                     tcpConnection.sendData(ansS);
+                    return;
+
+                case "message":
+                    Element msgElem = (Element) reqv.getElementsByTagName("message").item(0);
+                    Element sessionElem = (Element) reqv.getElementsByTagName("session").item(0);
+                    if(msgElem == null || sessionElem == null){
+                        return;
+                    }
+                    ID = Integer.parseInt(sessionElem.getTextContent());
+                    if(checkIDAndSendIfWrong(tcpConnection,ID,"message","wrong session ID for send message of users")){
+                        return;
+                    }
+
+                    Document BCMessage = builder.newDocument();
+                    rootElement = BCMessage.createElement("event");
+                    rootElement.setAttribute("name", "message");
+                    BCMessage.appendChild(rootElement);
+                    Element messageElement = BCMessage.createElement("message");
+                    messageElement.setTextContent(msgElem.getTextContent());
+                    Element nameElement = BCMessage.createElement("name");
+                    String senderName = "";
+                    for (User user : users){
+                        if(user.getID() == ID){
+                            senderName = user.getNickname();
+                            break;
+                        }
+                    }
+                    nameElement.setTextContent(senderName);
+                    rootElement.appendChild(messageElement);
+                    rootElement.appendChild(nameElement);
+                    stringWriter.getBuffer().setLength(0);
+
+                    writer.write(BCMessage, lsOutput);
+                    broadCastMessage(stringWriter.toString());
+
+                    sendSuccess(tcpConnection,"message");
 
             }
 
