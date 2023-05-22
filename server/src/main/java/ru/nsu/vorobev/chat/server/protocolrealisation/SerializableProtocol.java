@@ -5,6 +5,7 @@ import ru.nsu.vorobev.chat.network.connection.TCPConnectionListener;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionSerializable;
 import ru.nsu.vorobev.chat.network.connection.UserWithSameName;
 import ru.nsu.vorobev.chat.network.protocols.*;
+import ru.nsu.vorobev.chat.server.ChatServer;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -17,8 +18,6 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     private static int ID = 0;
 
     private final List<User> users = new ArrayList<>();
-    static final int maxHistoryLen = 5;
-
     private final List<Message> messagesHistory = new ArrayList<>();
 
     private final int port;
@@ -91,7 +90,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
             }
             tcpConnectionSerializable.sendData(new MessageAns(true,null));
 
-            if(messagesHistory.size() == maxHistoryLen){
+            if(messagesHistory.size() == ChatServer.maxHistoryLen){
                 messagesHistory.remove(0);
             }
             messagesHistory.add(BCMessage);

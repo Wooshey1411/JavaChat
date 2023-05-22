@@ -11,6 +11,7 @@ import org.w3c.dom.ls.LSSerializer;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import ru.nsu.vorobev.chat.network.connection.*;
+import ru.nsu.vorobev.chat.server.ChatServer;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -31,7 +32,6 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
     private final List<User> users = new ArrayList<>();
 
     private final List<String> messagesHistory = new ArrayList<>();
-    static final int maxHistoryLen = 5;
 
     private final DocumentBuilder builder;
 
@@ -96,8 +96,8 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         rootElement.setAttribute("name", "userlogin");
         ans.appendChild(rootElement);
         String name = "";
-        for (User user : users){
-            if(user.getConnection() == tcpConnection){
+        for (User user : users) {
+            if (user.getConnection() == tcpConnection) {
                 name = user.getNickname();
                 break;
             }
@@ -108,15 +108,14 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         stringWriter.getBuffer().setLength(0);
         writer.write(ans, lsOutput);
         broadCastMessage(stringWriter.toString());
-        for(String msg : messagesHistory){
+        for (String msg : messagesHistory) {
             tcpConnection.sendData(msg);
         }
         System.out.println("User connected");
     }
 
 
-
-    private synchronized boolean checkIDAndSendIfWrong(TCPConnection tcpConnection, int ID, String attribute, String reasonS){
+    private synchronized boolean checkIDAndSendIfWrong(TCPConnection tcpConnection, int ID, String attribute, String reasonS) {
         Document ans = builder.newDocument();
         boolean IDFound = false;
         for (User user : users) {
@@ -129,7 +128,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
             Element rootElement = ans.createElement("error");
             ans.appendChild(rootElement);
             Element reason = ans.createElement("reason");
-            reason.setAttribute("name",attribute);
+            reason.setAttribute("name", attribute);
             reason.setTextContent(reasonS);
             rootElement.appendChild(reason);
             stringWriter.getBuffer().setLength(0);
@@ -140,7 +139,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         return false;
     }
 
-    private synchronized void sendSuccess(TCPConnection tcpConnection, String attribute){
+    private synchronized void sendSuccess(TCPConnection tcpConnection, String attribute) {
         Document ans = builder.newDocument();
         Element rootElement = ans.createElement("success");
         rootElement.setAttribute("name", attribute);
@@ -150,6 +149,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         String ansS = stringWriter.toString();
         tcpConnection.sendData(ansS);
     }
+
     @Override
     public synchronized void onReceiveData(TCPConnection tcpConnection, Object obj) {
 
@@ -222,20 +222,20 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                     stringWriter.getBuffer().setLength(0);
                     writer.write(BCMessage, lsOutput);
                     String msg = stringWriter.toString();
-                    if(messagesHistory.size() == maxHistoryLen){
+                    if (messagesHistory.size() == ChatServer.maxHistoryLen) {
                         messagesHistory.remove(0);
                     }
                     messagesHistory.add(msg);
                     broadCastMessage(msg);
                     sendSuccess(tcpConnection, "message");
                 }
-                case "logout" ->{
+                case "logout" -> {
                     Element sessionElem = (Element) reqv.getElementsByTagName("session").item(0);
                     int id = Integer.parseInt(sessionElem.getTextContent());
-                    if(checkIDAndSendIfWrong(tcpConnection,id,"logout","Wrong session ID")){
+                    if (checkIDAndSendIfWrong(tcpConnection, id, "logout", "Wrong session ID")) {
                         return;
                     }
-                    sendSuccess(tcpConnection,"logout");
+                    sendSuccess(tcpConnection, "logout");
                 }
             }
 
@@ -248,8 +248,8 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
     @Override
     public synchronized void onDisconnect(TCPConnection tcpConnectionSerializable) {
         String name = null;
-        for(User user : users){
-            if (tcpConnectionSerializable == user.getConnection()){
+        for (User user : users) {
+            if (tcpConnectionSerializable == user.getConnection()) {
                 name = user.getNickname();
                 users.remove(user);
                 break;
@@ -292,49 +292,45 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
 
             // ansElement = (Element) answer.getElementsByTagName("name").item(0);
 
-            if (ansElement != null) {
-                NodeList nodeList = ansElement.getChildNodes();
-                for (int i = 0; i < nodeList.getLength(); i++) {
-                    if (nodeList.item(i).getNodeType() == Node.ELEMENT_NODE) {
-                        userName = nodeList.item(i).getTextContent();
-                        break;
-                    }
+
+            NodeList nodeList = ansElement.getChildNodes();
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                if (nodeList.item(i).getNodeType() == Node.ELEMENT_NODE) {
+                    userName = nodeList.item(i).getTextContent();
+                    break;
                 }
-                Document doc = builder.newDocument();
-
-                for (User user : users) {
-                    if (Objects.equals(user.getNickname(), userName)) {
-
-                        Element rootElement = doc.createElement("error");
-                        doc.appendChild(rootElement);
-
-                        Element reason = doc.createElement("reason");
-                        reason.setTextContent("Exist user with same name");
-                        rootElement.appendChild(reason);
-                        stringWriter.getBuffer().setLength(0);
-                        writer.write(doc, lsOutput);
-                        String ans = stringWriter.toString();
-                        System.out.println(ans);
-                        tcpConnection.sendData(ans);
-                        tcpConnection.disconnect();
-                        throw new UserWithSameName("Exist user with same name");
-                    }
-                }
-                Element rootElement = doc.createElement("success");
-                doc.appendChild(rootElement);
-                Element reason = doc.createElement("session");
-                int userID = ID++;
-                reason.setTextContent("" + userID);
-                rootElement.appendChild(reason);
-                stringWriter.getBuffer().setLength(0);
-
-                writer.write(doc, lsOutput);
-                tcpConnection.sendData(stringWriter.toString());
-                users.add(new User(tcpConnection, userName, userID));
-                return;
             }
+            Document doc = builder.newDocument();
 
-            throw new SocketException("Error during receiving message");
+            for (User user : users) {
+                if (Objects.equals(user.getNickname(), userName)) {
+
+                    Element rootElement = doc.createElement("error");
+                    doc.appendChild(rootElement);
+
+                    Element reason = doc.createElement("reason");
+                    reason.setTextContent("Exist user with same name");
+                    rootElement.appendChild(reason);
+                    stringWriter.getBuffer().setLength(0);
+                    writer.write(doc, lsOutput);
+                    String ans = stringWriter.toString();
+                    System.out.println(ans);
+                    tcpConnection.sendData(ans);
+                    tcpConnection.disconnect();
+                    throw new UserWithSameName("Exist user with same name");
+                }
+            }
+            Element rootElement = doc.createElement("success");
+            doc.appendChild(rootElement);
+            Element reason = doc.createElement("session");
+            int userID = ID++;
+            reason.setTextContent("" + userID);
+            rootElement.appendChild(reason);
+            stringWriter.getBuffer().setLength(0);
+
+            writer.write(doc, lsOutput);
+            tcpConnection.sendData(stringWriter.toString());
+            users.add(new User(tcpConnection, userName, userID));
         } catch (SAXException exception) {
             exception.printStackTrace();
         }

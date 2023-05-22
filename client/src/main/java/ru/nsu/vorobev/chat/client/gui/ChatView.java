@@ -66,15 +66,13 @@ public class ChatView implements ModelListener {
                 updateUsers();
                 Platform.runLater(() -> chatField.appendText("User " + model.getMsg() + " disconnected" + "\n"));
             }
-            case DISCONNECT -> {
-                Platform.runLater(() -> {
-                    usersField.clear();
-                    messageField.clear();
-                    sendBtn.setDisable(true);
-                    disconnectBtn.setDisable(true);
-                    makeAlert("Disconnected");
-                });
-            }
+            case DISCONNECT -> Platform.runLater(() -> {
+                usersField.clear();
+                messageField.clear();
+                sendBtn.setDisable(true);
+                disconnectBtn.setDisable(true);
+                makeAlert("Disconnected");
+            });
             case ERROR -> Platform.runLater(() -> makeAlert(model.getError()));
         }
     }

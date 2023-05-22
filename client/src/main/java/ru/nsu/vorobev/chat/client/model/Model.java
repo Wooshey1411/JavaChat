@@ -3,7 +3,6 @@ package ru.nsu.vorobev.chat.client.model;
 
 import ru.nsu.vorobev.chat.client.model.exceptions.SocketException;
 import ru.nsu.vorobev.chat.client.model.protocolrealisation.Connection;
-import ru.nsu.vorobev.chat.client.model.protocolrealisation.SerializableProtocol;
 import ru.nsu.vorobev.chat.client.model.protocolrealisation.XMLProtocol;
 
 import java.io.IOException;
@@ -22,12 +21,11 @@ public class Model {
     private ModelListener listener;
     private List<String> usersList = new ArrayList<>();
 
-    private Connection connection = new XMLProtocol(this);
+    private final Connection connection = new XMLProtocol(this); // or SerializableProtocol
 
     public void openConnection() {
 
         try {
-           // connection = new TCPConnectionSerializable(Model.this,new Socket(ipAddress,port));
             connection.connect();
         } catch (IOException ex){
             throw new SocketException("Error during opening the socket",ex);

@@ -16,8 +16,6 @@ import ru.nsu.vorobev.chat.network.connection.TCPConnection;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionByte;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionListener;
 import ru.nsu.vorobev.chat.network.connection.UserWithSameName;
-import ru.nsu.vorobev.chat.network.protocols.Message;
-import ru.nsu.vorobev.chat.network.protocols.UserLogin;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -25,7 +23,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.io.Writer;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
@@ -295,11 +292,4 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         }
     }
 
-    public void close() {
-        try {
-            stringWriter.close();
-        } catch (IOException ex){
-            ex.printStackTrace();
-        }
-    }
 }
