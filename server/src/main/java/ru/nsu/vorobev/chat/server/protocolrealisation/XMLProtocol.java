@@ -91,9 +91,29 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
     }
 
     @Override
-    public synchronized void onConnectionReady(TCPConnection tcpConnectionSerializable) {
+    public synchronized void onConnectionReady(TCPConnection tcpConnection) {
+        Document ans = builder.newDocument();
+        Element rootElement = ans.createElement("event");
+        rootElement.setAttribute("name", "userlogin");
+        ans.appendChild(rootElement);
+        String name = "";
+        for (User user : users){
+            if(user.getConnection() == tcpConnection){
+                name = user.getNickname();
+                break;
+            }
+        }
+        Element nameElement = ans.createElement("name");
+        nameElement.setTextContent(name);
+        rootElement.appendChild(nameElement);
+        stringWriter.getBuffer().setLength(0);
+        writer.write(ans, lsOutput);
+        broadCastMessage(stringWriter.toString());
+
         System.out.println("User connected");
     }
+
+
 
     private synchronized boolean checkIDAndSendIfWrong(TCPConnection tcpConnection, int ID, String attribute, String reasonS){
         Document ans = builder.newDocument();
@@ -138,7 +158,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
             String name = reqvElement.getAttribute("name");
 
             switch (name) {
-                case "list":
+                case "list" -> {
                     NodeList nodeList = reqvElement.getChildNodes();
                     int ID = -1;
                     for (int i = 0; i < nodeList.getLength(); i++) {
@@ -147,8 +167,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                             break;
                         }
                     }
-
-                    if(checkIDAndSendIfWrong(tcpConnection,ID,"list","wrong session ID for get list of users")){
+                    if (checkIDAndSendIfWrong(tcpConnection, ID, "list", "wrong session ID for get list of users")) {
                         return;
                     }
                     Document ans = builder.newDocument();
@@ -168,33 +187,30 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                         listusersElement.appendChild(userElement);
                     }
                     stringWriter.getBuffer().setLength(0);
-
                     writer.write(ans, lsOutput);
                     String ansS = stringWriter.toString();
                     tcpConnection.sendData(ansS);
-                    return;
-
-                case "message":
+                }
+                case "message" -> {
                     Element msgElem = (Element) reqv.getElementsByTagName("message").item(0);
                     Element sessionElem = (Element) reqv.getElementsByTagName("session").item(0);
-                    if(msgElem == null || sessionElem == null){
+                    if (msgElem == null || sessionElem == null) {
                         return;
                     }
                     ID = Integer.parseInt(sessionElem.getTextContent());
-                    if(checkIDAndSendIfWrong(tcpConnection,ID,"message","wrong session ID for send message of users")){
+                    if (checkIDAndSendIfWrong(tcpConnection, ID, "message", "wrong session ID for send message of users")) {
                         return;
                     }
-
                     Document BCMessage = builder.newDocument();
-                    rootElement = BCMessage.createElement("event");
+                    Element rootElement = BCMessage.createElement("event");
                     rootElement.setAttribute("name", "message");
                     BCMessage.appendChild(rootElement);
                     Element messageElement = BCMessage.createElement("message");
                     messageElement.setTextContent(msgElem.getTextContent());
                     Element nameElement = BCMessage.createElement("name");
                     String senderName = "";
-                    for (User user : users){
-                        if(user.getID() == ID){
+                    for (User user : users) {
+                        if (user.getID() == ID) {
                             senderName = user.getNickname();
                             break;
                         }
@@ -203,12 +219,10 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                     rootElement.appendChild(messageElement);
                     rootElement.appendChild(nameElement);
                     stringWriter.getBuffer().setLength(0);
-
                     writer.write(BCMessage, lsOutput);
                     broadCastMessage(stringWriter.toString());
-
-                    sendSuccess(tcpConnection,"message");
-
+                    sendSuccess(tcpConnection, "message");
+                }
             }
 
         } catch (IOException | SAXException ex) {
@@ -219,6 +233,26 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
 
     @Override
     public synchronized void onDisconnect(TCPConnection tcpConnectionSerializable) {
+        String name = null;
+        for(User user : users){
+            if (tcpConnectionSerializable == user.getConnection()){
+                name = user.getNickname();
+                users.remove(user);
+                break;
+            }
+        }
+        Document ans = builder.newDocument();
+        Element rootElement = ans.createElement("event");
+        rootElement.setAttribute("name", "userlogout");
+        ans.appendChild(rootElement);
+
+        Element nameElement = ans.createElement("name");
+        nameElement.setTextContent(name);
+        rootElement.appendChild(nameElement);
+        stringWriter.getBuffer().setLength(0);
+        writer.write(ans, lsOutput);
+        broadCastMessage(stringWriter.toString());
+
         System.out.println("User disconected");
     }
 

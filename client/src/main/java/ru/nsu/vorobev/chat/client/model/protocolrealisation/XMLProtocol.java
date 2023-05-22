@@ -17,6 +17,7 @@ import ru.nsu.vorobev.chat.network.connection.TCPConnectionByte;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionListener;
 import ru.nsu.vorobev.chat.network.connection.UserWithSameName;
 import ru.nsu.vorobev.chat.network.protocols.Message;
+import ru.nsu.vorobev.chat.network.protocols.UserLogin;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -29,6 +30,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class XMLProtocol implements TCPConnectionListener, Connection {
 
@@ -130,10 +132,10 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
             Element reqvElement = (Element) reqv.getElementsByTagName("success").item(0);
             if(reqvElement != null){
                 String name = reqvElement.getAttribute("name");
-                switch (name){
-                    case "list":
+                switch (name) {
+                    case "list" -> {
                         Element listUsersElem = (Element) reqv.getElementsByTagName("listusers").item(0);
-                        if(listUsersElem == null){
+                        if (listUsersElem == null) {
                             return;
                         }
                         NodeList nodeList = listUsersElem.getChildNodes();
@@ -146,8 +148,8 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                         }
                         model.setUsersList(users);
                         model.onModelChange(EventHandle.NAMES_REQ_SUCCESSFUL);
-                    case "message":
-                        model.onModelChange(EventHandle.MESSAGE_SUCCESSFUL);
+                    }
+                    case "message" -> model.onModelChange(EventHandle.MESSAGE_SUCCESSFUL);
                 }
 
                 return;
@@ -158,7 +160,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
             if(reqvElement != null) {
                 String name = reqvElement.getAttribute("name");
                 switch (name) {
-                    case "list":
+                    case "list" -> {
                         NodeList nodeList = reqvElement.getChildNodes();
                         for (int i = 0; i < nodeList.getLength(); i++) {
                             if (nodeList.item(i).getNodeType() == Node.ELEMENT_NODE) {
@@ -167,24 +169,49 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                             }
                         }
                         model.onModelChange(EventHandle.NAMES_REQ_FAILED);
-                    case "message":
-                        model.onModelChange(EventHandle.MESSAGE_FAILED);
-
+                    }
+                    case "message" -> model.onModelChange(EventHandle.MESSAGE_FAILED);
                 }
             }
 
             reqvElement = (Element) reqv.getElementsByTagName("event").item(0);
             if(reqvElement != null){
                 String name = reqvElement.getAttribute("name");
-                switch (name){
-                    case "message":
+                switch (name) {
+                    case "message" -> {
                         Element messageElem = (Element) reqv.getElementsByTagName("message").item(0);
                         Element nameElem = (Element) reqv.getElementsByTagName("name").item(0);
-                        if(messageElem == null || nameElem == null){
+                        if (messageElem == null || nameElem == null) {
                             return;
                         }
                         model.onModelReceive(nameElem.getTextContent() + ": " + messageElem.getTextContent());
-
+                    }
+                    case "userlogin" -> {
+                        Element nameElem = (Element) reqv.getElementsByTagName("name").item(0);
+                        if (nameElem == null) {
+                            return;
+                        }
+                        String userName = nameElem.getTextContent();
+                        if(Objects.equals(userName, model.getName())){
+                            return;
+                        }
+                        model.getUsersList().add(userName);
+                        model.setMsg(userName);
+                        model.onModelChange(EventHandle.USER_LOGIN);
+                    }
+                    case "userlogout" -> {
+                        Element nameElem = (Element) reqv.getElementsByTagName("name").item(0);
+                        if (nameElem == null) {
+                            return;
+                        }
+                        String userName = nameElem.getTextContent();
+                        if(Objects.equals(userName, model.getName())){
+                            return;
+                        }
+                        model.getUsersList().remove(userName);
+                        model.setMsg(userName);
+                        model.onModelChange(EventHandle.USER_LOGOUT);
+                    }
                 }
             }
 
