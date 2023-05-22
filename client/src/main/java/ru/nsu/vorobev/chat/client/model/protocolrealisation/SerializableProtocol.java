@@ -2,6 +2,7 @@ package ru.nsu.vorobev.chat.client.model.protocolrealisation;
 
 import ru.nsu.vorobev.chat.client.model.EventHandle;
 import ru.nsu.vorobev.chat.client.model.Model;
+import ru.nsu.vorobev.chat.network.connection.TCPConnection;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionListener;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionSerializable;
 import ru.nsu.vorobev.chat.network.connection.UserWithSameName;
@@ -30,12 +31,12 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     }
 
     @Override
-    public void onConnectionReady(TCPConnectionSerializable tcpConnectionSerializable) {
+    public void onConnectionReady(TCPConnection tcpConnectionSerializable) {
         model.onModelReceive("Connection ready...");
     }
 
     @Override
-    public void onReceiveData(TCPConnectionSerializable tcpConnectionSerializable, Object o) {
+    public void onReceiveData(TCPConnection tcpConnectionSerializable, Object o) {
 
         if (o instanceof MessageAns){
             if(!((MessageAns) o).isSuccessful()){
@@ -79,23 +80,22 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     }
 
     @Override
-    public void onDisconnect(TCPConnectionSerializable tcpConnectionSerializable) {
+    public void onDisconnect(TCPConnection tcpConnectionSerializable) {
         model.onModelReceive("Connection closed");
     }
 
     @Override
-    public void onException(TCPConnectionSerializable tcpConnectionSerializable, Exception ex) {
+    public void onException(TCPConnection tcpConnectionSerializable, Exception ex) {
         model.onModelReceive("Connection exception " + ex);
     }
     @Override
-    public void onRegistration(TCPConnectionSerializable tcpConnectionSerializable) throws IOException, ClassNotFoundException {
+    public void onRegistration(TCPConnection tcpConnectionSerializable) throws IOException, ClassNotFoundException {
         Registration registrationReq = new Registration(false,-1, model.getName());
 
-        tcpConnectionSerializable.getOut().writeObject(registrationReq);
-        tcpConnectionSerializable.getOut().flush();
+        tcpConnectionSerializable.sendData(registrationReq);
 
         Registration registrationAns;
-        registrationAns = (Registration)tcpConnectionSerializable.getIn().readObject();
+        registrationAns = (Registration)tcpConnectionSerializable.receiveData();
 
         if(!registrationAns.isSuccessful()){
             tcpConnectionSerializable.disconnect();

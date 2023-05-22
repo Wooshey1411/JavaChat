@@ -2,9 +2,8 @@ package ru.nsu.vorobev.chat.network.connection;
 
 import java.io.*;
 import java.net.Socket;
-import java.net.SocketException;
 
-public class TCPConnectionSerializable {
+public class TCPConnectionSerializable implements TCPConnection {
     private final Socket socket;
     private Thread thread;
     private final TCPConnectionListener eventListener;
@@ -74,11 +73,9 @@ public class TCPConnectionSerializable {
         return "TCPConnection: " + socket.getInetAddress().toString().substring(1) + ":" + socket.getPort();
     }
 
-    public ObjectInputStream getIn() {
-        return in;
+    @Override
+    public synchronized Object receiveData() throws IOException, ClassNotFoundException {
+        return in.readObject();
     }
 
-    public ObjectOutputStream getOut() {
-        return out;
-    }
 }

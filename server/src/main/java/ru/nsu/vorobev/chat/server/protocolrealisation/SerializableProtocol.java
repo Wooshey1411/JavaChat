@@ -1,5 +1,6 @@
 package ru.nsu.vorobev.chat.server.protocolrealisation;
 
+import ru.nsu.vorobev.chat.network.connection.TCPConnection;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionListener;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionSerializable;
 import ru.nsu.vorobev.chat.network.connection.UserWithSameName;
@@ -15,7 +16,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
 
     private static int ID = 0;
 
-    private final List<SerializableUser> serializableUsers = new ArrayList<>();
+    private final List<User> users = new ArrayList<>();
 
     private final List<Message> messagesHistory = new ArrayList<>();
 
@@ -48,14 +49,14 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     }
 
     @Override
-    public synchronized void onConnectionReady(TCPConnectionSerializable tcpConnectionSerializable) {
+    public synchronized void onConnectionReady(TCPConnection tcpConnectionSerializable) {
 
         String name = null;
         int ID = -1;
-        for (SerializableUser serializableUser : serializableUsers){
-            if(serializableUser.getConnection() == tcpConnectionSerializable){
-                name = serializableUser.getNickname();
-                ID = serializableUser.getID();
+        for (User user : users){
+            if(user.getConnection() == tcpConnectionSerializable){
+                name = user.getNickname();
+                ID = user.getID();
                 break;
             }
         }
@@ -67,14 +68,14 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     }
 
     @Override
-    public synchronized void onReceiveData(TCPConnectionSerializable tcpConnectionSerializable, Object obj) {
+    public synchronized void onReceiveData(TCPConnection tcpConnectionSerializable, Object obj) {
         if(obj instanceof Message){
             Message BCMessage = null;
-            SerializableUser sender = null;
-            for (SerializableUser serializableUser : serializableUsers){
-                if(serializableUser.getID() == ((Message) obj).getID()){
-                    sender = serializableUser;
-                    BCMessage = new Message(((Message) obj).getMessage(),-1, serializableUser.getNickname());
+            User sender = null;
+            for (User user : users){
+                if(user.getID() == ((Message) obj).getID()){
+                    sender = user;
+                    BCMessage = new Message(((Message) obj).getMessage(),-1, user.getNickname());
                 }
             }
             if(sender == null){
@@ -98,10 +99,10 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
             return;
         }
         if(obj instanceof NamesReq){
-            SerializableUser sender = null;
-            for (SerializableUser serializableUser : serializableUsers){
-                if(serializableUser.getID() == ((NamesReq) obj).getID()){
-                    sender = serializableUser;
+            User sender = null;
+            for (User user : users){
+                if(user.getID() == ((NamesReq) obj).getID()){
+                    sender = user;
                 }
             }
             if(sender == null){
@@ -110,8 +111,8 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
                 return;
             }
             NamesAns ans = new NamesAns(true,null);
-            for (SerializableUser serializableUser : serializableUsers){
-                ans.addName(serializableUser.getNickname());
+            for (User user : users){
+                ans.addName(user.getNickname());
             }
             tcpConnectionSerializable.sendData(ans);
             Log.log(Log.getTime() + ":Client " + sender.getNickname() + " with ID=" + sender.getID() + " send request of names successfully",Log.TypeOfLoggers.INFO);
@@ -121,12 +122,12 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     }
 
     @Override
-    public synchronized void onDisconnect(TCPConnectionSerializable tcpConnectionSerializable) {
+    public synchronized void onDisconnect(TCPConnection tcpConnectionSerializable) {
         String name = null;
-        for(SerializableUser serializableUser : serializableUsers){
-            if (tcpConnectionSerializable == serializableUser.getConnection()){
-                name = serializableUser.getNickname();
-                serializableUsers.remove(serializableUser);
+        for(User user : users){
+            if (tcpConnectionSerializable == user.getConnection()){
+                name = user.getNickname();
+                users.remove(user);
                 break;
             }
         }
@@ -135,37 +136,38 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     }
 
     @Override
-    public synchronized void onException(TCPConnectionSerializable tcpConnectionSerializable, Exception ex) {
+    public synchronized void onException(TCPConnection tcpConnectionSerializable, Exception ex) {
         Log.log(Log.getTime() + ":" + ex, Log.TypeOfLoggers.WARNING);
     }
 
     @Override
-    public void onRegistration(TCPConnectionSerializable tcpConnectionSerializable) throws IOException, ClassNotFoundException {
+    public void onRegistration(TCPConnection tcpConnectionSerializable) throws IOException, ClassNotFoundException {
         Registration registrationReceive;
-        registrationReceive = (Registration) tcpConnectionSerializable.getIn().readObject();
+        registrationReceive = (Registration)tcpConnectionSerializable.receiveData();
 
         //System.out.println(registrationReceive.msg);
         Registration registrationAns = new Registration(true,ID++,null);
-        for (SerializableUser serializableUser : serializableUsers){
-            if(Objects.equals(serializableUser.getNickname(), registrationReceive.getMsg())){
+        for (User user : users){
+            if(Objects.equals(user.getNickname(), registrationReceive.getMsg())){
                 registrationAns.setSuccessful(false);
                 registrationAns.setMsg("Exist user with same name");
                 break;
             }
         }
-        tcpConnectionSerializable.getOut().writeObject(registrationAns);
-        tcpConnectionSerializable.getOut().flush();
+        //tcpConnectionSerializable.getOut().writeObject(registrationAns);
+        tcpConnectionSerializable.sendData(registrationAns);
+       // tcpConnectionSerializable.getOut().flush();
         if(!registrationAns.isSuccessful()){
             Log.log(Log.getTime() + ":Client try to connect with exist nickname connection was closed. Nickname:" + registrationReceive.getMsg(),Log.TypeOfLoggers.INFO);
             throw new UserWithSameName("Exist user with same name");
         }
-        serializableUsers.add(new SerializableUser(tcpConnectionSerializable, registrationReceive.getMsg(),registrationAns.getID()));
+        users.add(new User(tcpConnectionSerializable, registrationReceive.getMsg(),registrationAns.getID()));
     }
 
     private void broadCastMessage(Object object) {
         //  System.out.println("Broadcast: " + object.toString());
-        for (SerializableUser serializableUser : serializableUsers) {
-            serializableUser.getConnection().sendData(object);
+        for (User user : users) {
+            user.getConnection().sendData(object);
         }
     }
 

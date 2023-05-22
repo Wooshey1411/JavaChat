@@ -3,9 +3,9 @@ package ru.nsu.vorobev.chat.network.connection;
 import java.io.IOException;
 
 public interface TCPConnectionListener {
-    void onConnectionReady(TCPConnectionSerializable tcpConnectionSerializable);
-    void onReceiveData(TCPConnectionSerializable tcpConnectionSerializable, Object obj);
-    void onDisconnect(TCPConnectionSerializable tcpConnectionSerializable);
-    void onException(TCPConnectionSerializable tcpConnectionSerializable, Exception ex);
-    void onRegistration(TCPConnectionSerializable tcpConnectionSerializable) throws IOException, ClassNotFoundException;
+    void onConnectionReady(TCPConnection tcpConnection);
+    void onReceiveData(TCPConnection tcpConnection, Object obj);
+    void onDisconnect(TCPConnection tcpConnection);
+    void onException(TCPConnection tcpConnection, Exception ex);
+    void onRegistration(TCPConnection tcpConnection) throws IOException, ClassNotFoundException;
 }
