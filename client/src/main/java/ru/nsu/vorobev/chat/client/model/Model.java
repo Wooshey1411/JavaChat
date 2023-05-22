@@ -4,6 +4,7 @@ package ru.nsu.vorobev.chat.client.model;
 import ru.nsu.vorobev.chat.client.model.exceptions.SocketException;
 import ru.nsu.vorobev.chat.client.model.protocolrealisation.Connection;
 import ru.nsu.vorobev.chat.client.model.protocolrealisation.SerializableProtocol;
+import ru.nsu.vorobev.chat.client.model.protocolrealisation.XMLProtocol;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,7 +21,7 @@ public class Model {
     private ModelListener listener;
     private List<String> usersList = new ArrayList<>();
 
-    private Connection connection = new SerializableProtocol(this);
+    private Connection connection = new XMLProtocol(this);
 
     public void openConnection() {
 
