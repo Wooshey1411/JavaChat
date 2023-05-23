@@ -23,6 +23,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.net.ProtocolException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
@@ -287,8 +288,10 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                 }
             }
             throw new SocketException("Error during receiving message");
-        } catch (SAXException exception){
-            exception.printStackTrace();
+        } catch (SAXException | NullPointerException exception){
+            model.setMsg("Wrong protocol");
+            tcpConnection.disconnect();
+            throw new ProtocolException("Wrong protocol");
         }
     }
 

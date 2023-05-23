@@ -1,13 +1,10 @@
 package ru.nsu.vorobev.chat.network.connection;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 public class TCPConnectionByte implements TCPConnection{
 
@@ -35,22 +32,22 @@ public class TCPConnectionByte implements TCPConnection{
             return;
         }
 
-        thread = new Thread(new Runnable() {
-            public void run() {
-                try {
+        thread = new Thread(() -> {
+            try {
+                if(socket.isConnected()) {
                     eventListener.onConnectionReady(TCPConnectionByte.this);
-                    while (thread != null && !thread.isInterrupted()) {
-                        String data = (String)receiveData();
-                            if(data == null){
-                                break;
-                            }
-                        eventListener.onReceiveData(TCPConnectionByte.this, data);
-                    }
-                } catch (IOException ex){
-                    eventListener.onException(TCPConnectionByte.this,ex);
-                }  finally {
-                    eventListener.onDisconnect(TCPConnectionByte.this);
                 }
+                while (thread != null && !thread.isInterrupted()) {
+                    String data = (String)receiveData();
+                        if(data == null){
+                            break;
+                        }
+                    eventListener.onReceiveData(TCPConnectionByte.this, data);
+                }
+            } catch (IOException ex){
+                eventListener.onException(TCPConnectionByte.this,ex);
+            }  finally {
+                eventListener.onDisconnect(TCPConnectionByte.this);
             }
         });
         thread.start();

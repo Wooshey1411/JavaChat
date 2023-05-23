@@ -28,20 +28,20 @@ public class TCPConnectionSerializable implements TCPConnection {
             return;
         }
 
-        thread = new Thread(new Runnable() {
-            public void run() {
-                try {
+        thread = new Thread(() -> {
+            try {
+                if(socket.isConnected()) {
                     eventListener.onConnectionReady(TCPConnectionSerializable.this);
-                    while (thread != null && !thread.isInterrupted()) {
-                        Object msg = in.readObject();
-                        eventListener.onReceiveData(TCPConnectionSerializable.this, msg);
-                    }
-                } catch (IOException ex){
-                    eventListener.onException(TCPConnectionSerializable.this,ex);
-                } catch (ClassNotFoundException ignored) {
-                } finally {
-                    eventListener.onDisconnect(TCPConnectionSerializable.this);
                 }
+                while (thread != null && !thread.isInterrupted()) {
+                    Object msg = in.readObject();
+                    eventListener.onReceiveData(TCPConnectionSerializable.this, msg);
+                }
+            } catch (IOException ex){
+                eventListener.onException(TCPConnectionSerializable.this,ex);
+            } catch (ClassNotFoundException ignored) {
+            } finally {
+                eventListener.onDisconnect(TCPConnectionSerializable.this);
             }
         });
         thread.start();

@@ -280,6 +280,9 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         try {
             String str = (String) tcpConnection.receiveData();
             System.out.println(str);
+            if(str == null){
+                throw new SAXException();
+            }
             Document answer = builder.parse(new InputSource(new StringReader(str)));
             System.out.println("Got data");
             Element ansElement = (Element) answer.getElementsByTagName("command").item(0);
@@ -332,7 +335,20 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
             tcpConnection.sendData(stringWriter.toString());
             users.add(new User(tcpConnection, userName, userID));
         } catch (SAXException exception) {
-            exception.printStackTrace();
+            Document document = builder.newDocument();
+            Element root = document.createElement("error");
+            document.appendChild(root);
+            Element reason = document.createElement("reason");
+            reason.setTextContent("Wrong protocol");
+            root.appendChild(reason);
+            stringWriter.getBuffer().setLength(0);
+            writer.write(reason, lsOutput);
+            tcpConnection.sendData(stringWriter.toString());
+            throw new ClassNotFoundException("Wrong protocol");
+
+
+
+           // exception.printStackTrace();
         }
     }
 }

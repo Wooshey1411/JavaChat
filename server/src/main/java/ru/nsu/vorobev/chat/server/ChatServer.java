@@ -1,6 +1,7 @@
 package ru.nsu.vorobev.chat.server;
 
 import ru.nsu.vorobev.chat.server.protocolrealisation.Connection;
+import ru.nsu.vorobev.chat.server.protocolrealisation.SerializableProtocol;
 import ru.nsu.vorobev.chat.server.protocolrealisation.XMLProtocol;
 
 
@@ -12,7 +13,7 @@ public class ChatServer {
 
         // Connection connection = new SerializableProtocol
 
-        Connection connection = new XMLProtocol(port);
+        Connection connection = new SerializableProtocol(port);
 
         connection.start();
     }

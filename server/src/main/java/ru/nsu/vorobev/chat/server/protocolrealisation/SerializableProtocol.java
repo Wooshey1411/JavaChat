@@ -156,7 +156,14 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     @Override
     public void onRegistration(TCPConnection tcpConnectionSerializable) throws IOException, ClassNotFoundException {
         Registration registrationReceive;
-        registrationReceive = (Registration)tcpConnectionSerializable.receiveData();
+        try {
+            registrationReceive = (Registration) tcpConnectionSerializable.receiveData();
+        } catch (ClassNotFoundException ex){
+            tcpConnectionSerializable.sendData(new Registration(false, -1,"wrong protocol"));
+            tcpConnectionSerializable.disconnect();
+            Log.log(Log.getTime() + ":TCPConnection try to connect with wrong protocol " + tcpConnectionSerializable, Log.TypeOfLoggers.WARNING);
+            throw new ClassNotFoundException("Wrong protocol");
+        }
 
         //System.out.println(registrationReceive.msg);
         Registration registrationAns = new Registration(true,ID++,null);

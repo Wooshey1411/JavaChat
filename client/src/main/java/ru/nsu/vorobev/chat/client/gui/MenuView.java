@@ -21,8 +21,8 @@ public class MenuView implements ModelListener {
             case BAD_IP_INPUT -> makeAlert("Bad ip format!");
             case BAD_PORT_INPUT -> makeAlert("Bad port!");
             case BIG_NICKNAME -> makeAlert("Count of symbols in nickname must be more than 0 and less than " + Model.maxLengthOfName);
-            case SOCKET_ERROR -> makeAlert("Server not available!");
-            case USER_WITH_SAME_NAME -> makeAlert("Exist user with same nickname!");
+            case SOCKET_ERROR -> makeAlert("Server not available or you use wrong protocol!");
+            case CONNECTION_ERROR -> makeAlert(model.getError());
         }
     }
 

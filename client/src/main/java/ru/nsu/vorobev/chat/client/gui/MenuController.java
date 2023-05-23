@@ -9,6 +9,7 @@ import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import ru.nsu.vorobev.chat.client.model.EventHandle;
 import ru.nsu.vorobev.chat.client.model.Model;
+import ru.nsu.vorobev.chat.client.model.exceptions.ProtocolException;
 import ru.nsu.vorobev.chat.client.model.exceptions.SocketException;
 import ru.nsu.vorobev.chat.network.connection.UserWithSameName;
 
@@ -105,8 +106,8 @@ public class MenuController extends MenuView {
         } catch (SocketException ex){
             model.sendEvent(EventHandle.SOCKET_ERROR);
             return;
-        } catch (UserWithSameName ignored){
-            model.sendEvent(EventHandle.USER_WITH_SAME_NAME);
+        } catch (UserWithSameName | ProtocolException ignored){
+            model.sendEvent(EventHandle.CONNECTION_ERROR);
             return;
         }
 

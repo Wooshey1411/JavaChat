@@ -2,6 +2,7 @@ package ru.nsu.vorobev.chat.client.model.protocolrealisation;
 
 import ru.nsu.vorobev.chat.client.model.EventHandle;
 import ru.nsu.vorobev.chat.client.model.Model;
+import ru.nsu.vorobev.chat.client.model.exceptions.ProtocolException;
 import ru.nsu.vorobev.chat.network.connection.TCPConnection;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionListener;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionSerializable;
@@ -99,17 +100,23 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
         model.onModelReceive("Connection exception " + ex);
     }
     @Override
-    public void onRegistration(TCPConnection tcpConnectionSerializable) throws IOException, ClassNotFoundException {
+    public void onRegistration(TCPConnection tcpConnectionSerializable) throws IOException {
         Registration registrationReq = new Registration(false,-1, model.getName());
 
         tcpConnectionSerializable.sendData(registrationReq);
 
         Registration registrationAns;
-        registrationAns = (Registration)tcpConnectionSerializable.receiveData();
+        try {
+            registrationAns = (Registration) tcpConnectionSerializable.receiveData();
+        } catch (ClassNotFoundException ex){
+            model.setError("Wrong protocol");
+            throw new ProtocolException("Wrong protocol");
+        }
 
         if(!registrationAns.isSuccessful()){
             tcpConnectionSerializable.disconnect();
-            throw new UserWithSameName("Exist user with same nickname");
+            model.setError(registrationAns.getMsg());
+            throw new UserWithSameName(registrationAns.getMsg());
         }
 
         model.setID(registrationAns.getID());
