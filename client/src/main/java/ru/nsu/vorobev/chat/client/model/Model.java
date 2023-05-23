@@ -1,8 +1,10 @@
 package ru.nsu.vorobev.chat.client.model;
 
 
+import ru.nsu.vorobev.chat.client.model.configparser.BadConfigException;
 import ru.nsu.vorobev.chat.client.model.exceptions.SocketException;
 import ru.nsu.vorobev.chat.client.model.protocolrealisation.Connection;
+import ru.nsu.vorobev.chat.client.model.protocolrealisation.SerializableProtocol;
 import ru.nsu.vorobev.chat.client.model.protocolrealisation.XMLProtocol;
 
 import java.io.IOException;
@@ -20,9 +22,15 @@ public class Model {
     private String error;
     private ModelListener listener;
     private List<String> usersList = new ArrayList<>();
+    private final Connection connection;
 
-    private final Connection connection = new XMLProtocol(this); // or SerializableProtocol
-
+    public Model(String protocol){
+        switch (protocol){
+            case "XML" -> connection = new XMLProtocol(this);
+            case "Serialization" -> connection = new SerializableProtocol(this);
+            default -> throw new BadConfigException("Such protocol doesn't exist");
+        }
+    }
     public void openConnection() {
 
         try {
