@@ -41,7 +41,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>ru.nsu.vorobev.chat.server.ChatServer</mainClass>
+                            <mainClass>ru.nsu.vorobev.chat.server.Main</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

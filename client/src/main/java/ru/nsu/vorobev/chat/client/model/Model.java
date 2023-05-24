@@ -4,6 +4,7 @@ package ru.nsu.vorobev.chat.client.model;
 import ru.nsu.vorobev.chat.client.model.configparser.BadConfigException;
 import ru.nsu.vorobev.chat.client.model.exceptions.SocketException;
 import ru.nsu.vorobev.chat.client.model.protocolrealisation.Connection;
+//import ru.nsu.vorobev.chat.client.model.protocolrealisation.SerializableProtocol;
 import ru.nsu.vorobev.chat.client.model.protocolrealisation.SerializableProtocol;
 import ru.nsu.vorobev.chat.client.model.protocolrealisation.XMLProtocol;
 
@@ -27,7 +28,7 @@ public class Model {
     public Model(String protocol){
         switch (protocol){
             case "XML" -> connection = new XMLProtocol(this);
-            case "Serialization" -> connection = new SerializableProtocol(this);
+            case "Serializable" -> connection = new SerializableProtocol(this);
             default -> throw new BadConfigException("Such protocol doesn't exist");
         }
     }

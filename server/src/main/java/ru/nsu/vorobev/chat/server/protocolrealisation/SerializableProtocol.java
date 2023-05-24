@@ -1,13 +1,13 @@
 package ru.nsu.vorobev.chat.server.protocolrealisation;
 
 import ru.nsu.vorobev.chat.network.connection.TCPConnection;
+import ru.nsu.vorobev.chat.network.connection.TCPConnectionByte;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionListener;
-import ru.nsu.vorobev.chat.network.connection.TCPConnectionSerializable;
 import ru.nsu.vorobev.chat.network.connection.UserWithSameName;
 import ru.nsu.vorobev.chat.network.protocols.*;
 import ru.nsu.vorobev.chat.server.ChatServer;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +26,27 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
         this.port = port;
     }
 
+    byte[] convertObjectToByte(Object o){
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            ObjectOutputStream out;
+            out = new ObjectOutputStream(bos);
+            out.writeObject(o);
+            out.flush();
+            return bos.toByteArray();
+        } catch (IOException ex){
+            return null;
+        }
+    }
+
+    Object convertByteToObject(byte[] obj){
+        ByteArrayInputStream bis = new ByteArrayInputStream(obj);
+        try (ObjectInput in = new ObjectInputStream(bis)) {
+            return in.readObject();
+        } catch (IOException | ClassNotFoundException ex){
+            return null;
+        }
+    }
+
     @Override
     public void start(){
         System.out.println("Server running...");
@@ -35,7 +56,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             while (true) {
                 try {
-                    new TCPConnectionSerializable(this, serverSocket.accept());
+                    new TCPConnectionByte(this, serverSocket.accept());
                 } catch (IOException ex) {
                     Log.log(Log.getTime() + ":TCPConnection exception:" + ex,Log.TypeOfLoggers.ERROR);
                 }
@@ -63,12 +84,16 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
         Log.log(Log.getTime() + ":Client connected. Nickname:" +name + " ID=" + ID, Log.TypeOfLoggers.INFO);
         broadCastMessage(new UserLogin(name));
         for (Message msg : messagesHistory){
-            tcpConnectionSerializable.sendData(msg);
+            tcpConnectionSerializable.sendData(convertObjectToByte(msg));
         }
     }
 
     @Override
-    public synchronized void onReceiveData(TCPConnection tcpConnectionSerializable, Object obj) {
+    public synchronized void onReceiveData(TCPConnection tcpConnectionSerializable, byte[] bytes) {
+        Object obj = convertByteToObject(bytes);
+        if(obj == null){
+            return;
+        }
         if(obj instanceof Message){
             Message BCMessage = null;
             User sender = null;
@@ -79,16 +104,16 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
                 }
             }
             if(sender == null){
-                tcpConnectionSerializable.sendData(new MessageAns(false, "Bad ID"));
+                tcpConnectionSerializable.sendData(convertObjectToByte(new MessageAns(false, "Bad ID")));
                 Log.log(Log.getTime() + ":Client try to send message with nonexistent ID. TCPConnection:" + tcpConnectionSerializable,Log.TypeOfLoggers.INFO);
                 return;
             }
             if(((Message) obj).getMessage() == null){
-                tcpConnectionSerializable.sendData(new MessageAns(false, "Null string"));
+                tcpConnectionSerializable.sendData(convertObjectToByte(new MessageAns(false, "Null string")));
                 Log.log(Log.getTime() + ":Client try to send message with NULL string. ID=" + sender.getID(),Log.TypeOfLoggers.INFO);
                 return;
             }
-            tcpConnectionSerializable.sendData(new MessageAns(true,null));
+            tcpConnectionSerializable.sendData(convertObjectToByte(new MessageAns(true,null)));
 
             if(messagesHistory.size() == ChatServer.maxHistoryLen){
                 messagesHistory.remove(0);
@@ -106,7 +131,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
                 }
             }
             if(sender == null){
-                tcpConnectionSerializable.sendData(new NamesAns(false, "Bad ID"));
+                tcpConnectionSerializable.sendData(convertObjectToByte(new NamesAns(false, "Bad ID")));
                 Log.log(Log.getTime() + ":Client send request of names with nonexistent ID. TCPConnection:" + tcpConnectionSerializable,Log.TypeOfLoggers.INFO);
                 return;
             }
@@ -114,7 +139,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
             for (User user : users){
                 ans.addName(user.getNickname());
             }
-            tcpConnectionSerializable.sendData(ans);
+            tcpConnectionSerializable.sendData(convertObjectToByte(ans));
             Log.log(Log.getTime() + ":Client " + sender.getNickname() + " with ID=" + sender.getID() + " send request of names successfully",Log.TypeOfLoggers.INFO);
         }
         if(obj instanceof Disconnect){
@@ -126,10 +151,10 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
                 }
             }
             if(id == -1){
-                tcpConnectionSerializable.sendData(new Disconnect(false,"Wrong session ID",0));
+                tcpConnectionSerializable.sendData(convertObjectToByte(new Disconnect(false,"Wrong session ID",0)));
                 return;
             }
-            tcpConnectionSerializable.sendData(new Disconnect(true,"null",0));
+            tcpConnectionSerializable.sendData(convertObjectToByte(new Disconnect(true,"null",0)));
         }
 
     }
@@ -157,9 +182,9 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     public void onRegistration(TCPConnection tcpConnectionSerializable) throws IOException, ClassNotFoundException {
         Registration registrationReceive;
         try {
-            registrationReceive = (Registration) tcpConnectionSerializable.receiveData();
+            registrationReceive = (Registration) convertByteToObject(tcpConnectionSerializable.receiveData());
         } catch (ClassNotFoundException ex){
-            tcpConnectionSerializable.sendData(new Registration(false, -1,"wrong protocol"));
+            tcpConnectionSerializable.sendData(convertObjectToByte(new Registration(false, -1,"wrong protocol")));
             tcpConnectionSerializable.disconnect();
             Log.log(Log.getTime() + ":TCPConnection try to connect with wrong protocol " + tcpConnectionSerializable, Log.TypeOfLoggers.WARNING);
             throw new ClassNotFoundException("Wrong protocol");
@@ -175,7 +200,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
             }
         }
         //tcpConnectionSerializable.getOut().writeObject(registrationAns);
-        tcpConnectionSerializable.sendData(registrationAns);
+        tcpConnectionSerializable.sendData(convertObjectToByte(registrationAns));
        // tcpConnectionSerializable.getOut().flush();
         if(!registrationAns.isSuccessful()){
             Log.log(Log.getTime() + ":Client try to connect with exist nickname connection was closed. Nickname:" + registrationReceive.getMsg(),Log.TypeOfLoggers.INFO);
@@ -187,7 +212,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     private void broadCastMessage(Object object) {
         //  System.out.println("Broadcast: " + object.toString());
         for (User user : users) {
-            user.getConnection().sendData(object);
+            user.getConnection().sendData(convertObjectToByte(object));
         }
     }
 

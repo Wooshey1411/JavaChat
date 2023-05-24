@@ -26,6 +26,7 @@ import java.io.StringWriter;
 import java.net.ProtocolException;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -104,7 +105,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         rootElement.appendChild(sessionElem);
         stringWriter.getBuffer().setLength(0);
         writer.write(doc,lsOutput);
-        connection.sendData(stringWriter.toString());
+        connection.sendData(stringWriter.toString().getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -120,7 +121,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         rootElement.appendChild(session);
         stringWriter.getBuffer().setLength(0);
         writer.write(doc,lsOutput);
-        connection.sendData(stringWriter.toString());
+        connection.sendData(stringWriter.toString().getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -136,13 +137,13 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         rootElement.appendChild(session);
         stringWriter.getBuffer().setLength(0);
         writer.write(doc,lsOutput);
-        connection.sendData(stringWriter.toString());
+        connection.sendData(stringWriter.toString().getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
-    public void onReceiveData(TCPConnection tcpConnection, Object o) {
+    public void onReceiveData(TCPConnection tcpConnection, byte[] o) {
         try {
-            Document reqv = builder.parse(new InputSource(new StringReader((String) o)));
+            Document reqv = builder.parse(new InputSource(new StringReader(new String(o, StandardCharsets.UTF_8))));
             Element reqvElement = (Element) reqv.getElementsByTagName("success").item(0);
             if(reqvElement != null){
                 String name = reqvElement.getAttribute("name");
@@ -260,12 +261,11 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         rootElement.appendChild(type);
         stringWriter.getBuffer().setLength(0);
         writer.write(doc,lsOutput);
-        tcpConnection.sendData(stringWriter.toString());
+        tcpConnection.sendData(stringWriter.toString().getBytes());
 
         try {
-            String str = (String) tcpConnection.receiveData();
-            System.out.println(str);
-            Document answer = builder.parse(new InputSource(new StringReader(str)));
+            byte[] in = tcpConnection.receiveData();
+            Document answer = builder.parse(new InputSource(new StringReader(new String(in, StandardCharsets.UTF_8))));
             Element ansElement = (Element) answer.getElementsByTagName("error").item(0);
             if(ansElement != null){
                 NodeList nodeList = ansElement.getChildNodes();

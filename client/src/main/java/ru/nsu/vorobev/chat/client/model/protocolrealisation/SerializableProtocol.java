@@ -4,12 +4,12 @@ import ru.nsu.vorobev.chat.client.model.EventHandle;
 import ru.nsu.vorobev.chat.client.model.Model;
 import ru.nsu.vorobev.chat.client.model.exceptions.ProtocolException;
 import ru.nsu.vorobev.chat.network.connection.TCPConnection;
+import ru.nsu.vorobev.chat.network.connection.TCPConnectionByte;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionListener;
-import ru.nsu.vorobev.chat.network.connection.TCPConnectionSerializable;
 import ru.nsu.vorobev.chat.network.connection.UserWithSameName;
 import ru.nsu.vorobev.chat.network.protocols.*;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.util.Objects;
 
@@ -21,10 +21,31 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
         this.model = model;
     }
 
-    private TCPConnectionSerializable connection;
+    private TCPConnectionByte connection;
     @Override
     public void connect() throws IOException {
-        connection = new TCPConnectionSerializable(SerializableProtocol.this,new Socket(model.getIpAddress(), model.getPort()));
+        connection = new TCPConnectionByte(SerializableProtocol.this,new Socket(model.getIpAddress(), model.getPort()));
+    }
+
+    byte[] ConvertObjectToByte(Object o){
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            ObjectOutputStream out;
+            out = new ObjectOutputStream(bos);
+            out.writeObject(o);
+            out.flush();
+            return bos.toByteArray();
+        } catch (IOException ex){
+            return null;
+        }
+    }
+
+    Object ConvertByteToObject(byte[] obj){
+        ByteArrayInputStream bis = new ByteArrayInputStream(obj);
+        try (ObjectInput in = new ObjectInputStream(bis)) {
+            return in.readObject();
+        } catch (IOException | ClassNotFoundException ex){
+            return null;
+        }
     }
     @Override
     public void disconnect(){
@@ -37,8 +58,11 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     }
 
     @Override
-    public void onReceiveData(TCPConnection tcpConnectionSerializable, Object o) {
-
+    public void onReceiveData(TCPConnection tcpConnectionSerializable, byte[] bytes) {
+        Object o = ConvertByteToObject(bytes);
+        if(o == null){
+            return;
+        }
         if (o instanceof MessageAns){
             if(!((MessageAns) o).isSuccessful()){
                 model.setMsg(((MessageAns) o).getReason());
@@ -103,11 +127,11 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     public void onRegistration(TCPConnection tcpConnectionSerializable) throws IOException {
         Registration registrationReq = new Registration(false,-1, model.getName());
 
-        tcpConnectionSerializable.sendData(registrationReq);
+        tcpConnectionSerializable.sendData(ConvertObjectToByte(registrationReq));
 
         Registration registrationAns;
         try {
-            registrationAns = (Registration) tcpConnectionSerializable.receiveData();
+            registrationAns = (Registration) ConvertByteToObject(tcpConnectionSerializable.receiveData());
         } catch (ClassNotFoundException ex){
             model.setError("Wrong protocol");
             throw new ProtocolException("Wrong protocol");
@@ -124,16 +148,16 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
 
     @Override
     public void sendMsg(String msg){
-        connection.sendData(new Message(msg, model.getID(),null));
+        connection.sendData(ConvertObjectToByte(new Message(msg, model.getID(),null)));
     }
     @Override
     public void usersListRequest(){
-        connection.sendData(new NamesReq(model.getID()));
+        connection.sendData(ConvertObjectToByte(new NamesReq(model.getID())));
     }
 
     @Override
     public void disconnectRequest() {
-        connection.sendData(new Disconnect(true,null, model.getID()));
+        connection.sendData(ConvertObjectToByte(new Disconnect(true,null, model.getID())));
     }
 
 }

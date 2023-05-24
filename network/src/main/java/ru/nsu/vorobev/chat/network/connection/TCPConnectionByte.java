@@ -4,7 +4,6 @@ import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 public class TCPConnectionByte implements TCPConnection{
 
@@ -38,7 +37,7 @@ public class TCPConnectionByte implements TCPConnection{
                     eventListener.onConnectionReady(TCPConnectionByte.this);
                 }
                 while (thread != null && !thread.isInterrupted()) {
-                    String data = (String)receiveData();
+                    byte[] data = receiveData();
                         if(data == null){
                             break;
                         }
@@ -54,20 +53,17 @@ public class TCPConnectionByte implements TCPConnection{
     }
 
     @Override
-    public void sendData(Object obj){
+    public void sendData(byte[] obj){
         try{
             ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES);
-            buffer.putInt(((String)obj).length());
+            buffer.putInt(obj.length);
             buffer.rewind();
             byte[] len = buffer.array();
-            byte[] msg = ((String)obj).getBytes();
-            byte[] send = new byte[msg.length + Integer.SIZE / 8];
+            byte[] send = new byte[obj.length + Integer.BYTES];
 
-            System.arraycopy(len,0,send,0,Integer.SIZE/8);
-            System.arraycopy(msg,0,send,Integer.SIZE/8,msg.length);
+            System.arraycopy(len,0,send,0,Integer.BYTES);
+            System.arraycopy(obj,0,send,Integer.BYTES,obj.length);
             out.write(send);
-           // out.flush();
-
         } catch (IOException ex){
             ex.printStackTrace();
             eventListener.onException(TCPConnectionByte.this,ex);
@@ -76,7 +72,7 @@ public class TCPConnectionByte implements TCPConnection{
     }
 
     @Override
-    public Object receiveData() throws IOException {
+    public byte[] receiveData() throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES);
         buffer.put(in.readNBytes(Integer.BYTES));
         buffer.rewind();
@@ -86,7 +82,7 @@ public class TCPConnectionByte implements TCPConnection{
         }
         byte[] buff;
         buff = in.readNBytes(len);
-        return new String(buff,StandardCharsets.UTF_8);
+        return buff;
     }
 
     @Override

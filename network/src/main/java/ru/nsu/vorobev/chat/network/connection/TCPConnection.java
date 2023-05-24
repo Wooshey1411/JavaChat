@@ -4,7 +4,7 @@ import java.io.IOException;
 
 public interface TCPConnection {
     void disconnect();
-    void sendData(Object obj);
-    Object receiveData() throws IOException, ClassNotFoundException;
+    void sendData(byte[] data);
+    byte[] receiveData() throws IOException, ClassNotFoundException;
 
 }

@@ -21,6 +21,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.ServerSocket;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -85,7 +86,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
     private synchronized void broadCastMessage(String msg) {
         //  System.out.println("Broadcast: " + object.toString());
         for (User user : users) {
-            user.getConnection().sendData(msg);
+            user.getConnection().sendData(msg.getBytes());
         }
     }
 
@@ -109,7 +110,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         writer.write(ans, lsOutput);
         broadCastMessage(stringWriter.toString());
         for (String msg : messagesHistory) {
-            tcpConnection.sendData(msg);
+            tcpConnection.sendData(msg.getBytes());
         }
         System.out.println("User connected");
     }
@@ -133,7 +134,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
             rootElement.appendChild(reason);
             stringWriter.getBuffer().setLength(0);
             writer.write(ans, lsOutput);
-            tcpConnection.sendData(stringWriter.toString());
+            tcpConnection.sendData(stringWriter.toString().getBytes());
             return true;
         }
         return false;
@@ -147,14 +148,14 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         stringWriter.getBuffer().setLength(0);
         writer.write(ans, lsOutput);
         String ansS = stringWriter.toString();
-        tcpConnection.sendData(ansS);
+        tcpConnection.sendData(ansS.getBytes());
     }
 
     @Override
-    public synchronized void onReceiveData(TCPConnection tcpConnection, Object obj) {
+    public synchronized void onReceiveData(TCPConnection tcpConnection, byte[] obj) {
 
         try {
-            Document reqv = builder.parse(new InputSource(new StringReader((String) obj)));
+            Document reqv = builder.parse(new InputSource(new StringReader(new String(obj, StandardCharsets.UTF_8))));
             Element reqvElement = (Element) reqv.getElementsByTagName("command").item(0);
             String name = reqvElement.getAttribute("name");
 
@@ -190,7 +191,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                     stringWriter.getBuffer().setLength(0);
                     writer.write(ans, lsOutput);
                     String ansS = stringWriter.toString();
-                    tcpConnection.sendData(ansS);
+                    tcpConnection.sendData(ansS.getBytes());
                 }
                 case "message" -> {
                     Element msgElem = (Element) reqv.getElementsByTagName("message").item(0);
@@ -278,12 +279,13 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
     @Override
     public void onRegistration(TCPConnection tcpConnection) throws IOException, ClassNotFoundException {
         try {
-            String str = (String) tcpConnection.receiveData();
-            System.out.println(str);
-            if(str == null){
+            byte[] in = tcpConnection.receiveData();
+           // System.out.println(str);
+            if(in == null){
                 throw new SAXException();
             }
-            Document answer = builder.parse(new InputSource(new StringReader(str)));
+
+            Document answer = builder.parse(new InputSource(new StringReader(new String(in, StandardCharsets.UTF_8))));
             System.out.println("Got data");
             Element ansElement = (Element) answer.getElementsByTagName("command").item(0);
             String name = ansElement.getAttribute("name");
@@ -318,7 +320,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                     writer.write(doc, lsOutput);
                     String ans = stringWriter.toString();
                     System.out.println(ans);
-                    tcpConnection.sendData(ans);
+                    tcpConnection.sendData(ans.getBytes());
                     tcpConnection.disconnect();
                     throw new UserWithSameName("Exist user with same name");
                 }
@@ -332,7 +334,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
             stringWriter.getBuffer().setLength(0);
 
             writer.write(doc, lsOutput);
-            tcpConnection.sendData(stringWriter.toString());
+            tcpConnection.sendData(stringWriter.toString().getBytes());
             users.add(new User(tcpConnection, userName, userID));
         } catch (SAXException exception) {
             Document document = builder.newDocument();
@@ -343,7 +345,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
             root.appendChild(reason);
             stringWriter.getBuffer().setLength(0);
             writer.write(reason, lsOutput);
-            tcpConnection.sendData(stringWriter.toString());
+            tcpConnection.sendData(stringWriter.toString().getBytes());
             throw new ClassNotFoundException("Wrong protocol");
 
 
