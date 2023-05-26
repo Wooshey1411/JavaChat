@@ -147,8 +147,11 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         ans.appendChild(rootElement);
         stringWriter.getBuffer().setLength(0);
         writer.write(ans, lsOutput);
-        String ansS = stringWriter.toString();
-        tcpConnection.sendData(ansS.getBytes());
+        String ansDirty = stringWriter.toString() + "</success>";
+        int index = ansDirty.indexOf('/');
+        String ansClear = ansDirty.substring(0,index) + ansDirty.substring(index+1);
+        System.out.println(ansClear);
+        tcpConnection.sendData(ansClear.getBytes());
     }
 
     @Override

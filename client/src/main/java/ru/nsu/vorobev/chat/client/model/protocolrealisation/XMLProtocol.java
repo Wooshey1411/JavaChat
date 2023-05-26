@@ -143,7 +143,8 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
     @Override
     public void onReceiveData(TCPConnection tcpConnection, byte[] o) {
         try {
-            Document reqv = builder.parse(new InputSource(new StringReader(new String(o, StandardCharsets.UTF_8))));
+            String r = new String(o, StandardCharsets.UTF_8);
+            Document reqv = builder.parse(new InputSource(new StringReader(r)));
             Element reqvElement = (Element) reqv.getElementsByTagName("success").item(0);
             if(reqvElement != null){
                 String name = reqvElement.getAttribute("name");
