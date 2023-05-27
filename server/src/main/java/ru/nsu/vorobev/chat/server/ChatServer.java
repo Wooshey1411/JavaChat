@@ -4,6 +4,7 @@ import ru.nsu.vorobev.chat.network.connection.TCPConnection;
 import ru.nsu.vorobev.chat.server.configparser.BadConfigException;
 import ru.nsu.vorobev.chat.server.configparser.ConfigParser;
 import ru.nsu.vorobev.chat.server.protocolrealisation.*;
+import ru.nsu.vorobev.chat.server.protocolrealisation.serializable.SerializableProtocol;
 
 import java.util.ArrayList;
 import java.util.HashMap;

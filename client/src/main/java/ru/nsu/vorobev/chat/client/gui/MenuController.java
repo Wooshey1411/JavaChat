@@ -32,7 +32,7 @@ public class MenuController extends MenuView {
 
     public void setModel(Model model) {
         this.model = model;
-        model.setListener(this);
+        model.setMenuListener(this);
     }
 
     @FXML
@@ -51,13 +51,14 @@ public class MenuController extends MenuView {
                 Platform.exit();
             });
             isNewWindowCreated = true;
+            ((ChatController)(newWindowLoader.getController())).setModel(model);
         }
 
 
 
         String ip = ipField.getText();
         if (ip.chars().filter(c -> c == '.').count() != 3) {
-            model.sendEvent(EventHandle.BAD_IP_INPUT);
+            model.sendMenuEvent(EventHandle.BAD_IP_INPUT);
             return;
         }
         int pos = 0;
@@ -75,7 +76,7 @@ public class MenuController extends MenuView {
                     throw new NumberFormatException();
                 }
             } catch (NumberFormatException ex) {
-                model.sendEvent(EventHandle.BAD_IP_INPUT);
+                model.sendMenuEvent(EventHandle.BAD_IP_INPUT);
                 return;
             }
             pos = index + 1;
@@ -88,7 +89,7 @@ public class MenuController extends MenuView {
                 throw new NumberFormatException();
             }
         } catch (NumberFormatException ex) {
-            model.sendEvent(EventHandle.BAD_PORT_INPUT);
+            model.sendMenuEvent(EventHandle.BAD_PORT_INPUT);
             return;
         }
         model.setPort(port);
@@ -96,7 +97,7 @@ public class MenuController extends MenuView {
         String nickname = nickField.getText();
 
         if (nickname.length() > Model.maxLengthOfName || nickname.length() == 0) {
-            model.sendEvent(EventHandle.BIG_NICKNAME);
+            model.sendMenuEvent(EventHandle.BIG_NICKNAME);
             return;
         }
         model.setName(nickname);
@@ -104,14 +105,14 @@ public class MenuController extends MenuView {
         try{
             model.openConnection();
         } catch (SocketException ex){
-            model.sendEvent(EventHandle.SOCKET_ERROR);
+            model.sendMenuEvent(EventHandle.SOCKET_ERROR);
             return;
         } catch (UserWithSameName | ProtocolException ignored){
-            model.sendEvent(EventHandle.CONNECTION_ERROR);
+            model.sendMenuEvent(EventHandle.CONNECTION_ERROR);
             return;
         }
 
-        ((ChatController)(newWindowLoader.getController())).setModel(model);
+
         newWindowStage.show();
 
         Stage stageM = (Stage) nickField.getScene().getWindow();

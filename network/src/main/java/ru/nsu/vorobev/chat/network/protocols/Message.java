@@ -1,9 +1,11 @@
 package ru.nsu.vorobev.chat.network.protocols;
 
+import ru.nsu.vorobev.chat.network.connection.TCPConnection;
+
 import java.io.Serial;
 import java.io.Serializable;
 
-public class Message implements Serializable {
+public class Message implements Serializable,OperableServer {
     @Serial
     private static final long serialVersionUID = 5;
     public Message(String message, int ID, String name){
@@ -14,15 +16,12 @@ public class Message implements Serializable {
     private final String message;
     private final int ID;
     private final String name;
-    public String getMessage() {
-        return message;
-    }
-
     public int getID() {
         return ID;
     }
 
-    public String getName() {
-        return name;
+    @Override
+    public void doOperation(IContextServer contextServer, TCPConnection connection) {
+        contextServer.onMessageReact(connection,message,ID);
     }
 }

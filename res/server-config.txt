@@ -1,2 +1,2 @@
 port=8377
-protocol=XML
+protocol=Serializable

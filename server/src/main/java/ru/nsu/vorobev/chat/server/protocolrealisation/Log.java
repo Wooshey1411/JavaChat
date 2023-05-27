@@ -70,7 +70,7 @@ public class Log {
 
     }
 
-    enum TypeOfLoggers{
+    public enum TypeOfLoggers{
         INFO,
         WARNING,
         ERROR

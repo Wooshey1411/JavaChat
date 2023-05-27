@@ -22,6 +22,7 @@ public class Model {
     private String msg;
     private String error;
     private ModelListener listener;
+    private ModelListener menuListener;
     private List<String> usersList = new ArrayList<>();
     private final Connection connection;
 
@@ -123,5 +124,12 @@ public class Model {
 
     public void setError(String error) {
         this.error = error;
+    }
+
+    public void setMenuListener(ModelListener listener){
+        this.menuListener  = listener;
+    }
+    public void sendMenuEvent(EventHandle handle){
+        menuListener.onModelChanged(handle);
     }
 }

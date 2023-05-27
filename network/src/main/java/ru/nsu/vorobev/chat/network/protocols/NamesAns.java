@@ -5,7 +5,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class NamesAns implements Serializable {
+public class NamesAns implements Serializable,Operable {
     @Serial
     private static final long serialVersionUID = 5;
 
@@ -17,19 +17,11 @@ public class NamesAns implements Serializable {
     String reason;
     List<String> names = new ArrayList<>();
 
-    public List<String> getNames() {
-        return names;
-    }
-
     public void addName(String name){
         names.add(name);
     }
-
-    public String getReason() {
-        return reason;
-    }
-
-    public boolean isSuccessful() {
-        return isSuccessful;
+    @Override
+    public void doOperation(IContext context) {
+        context.onNamesReact(isSuccessful,reason,names);
     }
 }

@@ -3,7 +3,7 @@ package ru.nsu.vorobev.chat.network.protocols;
 import java.io.Serial;
 import java.io.Serializable;
 
-public class UserLogout implements Serializable {
+public class UserLogout implements Serializable,Operable {
     @Serial
     private static final long serialVersionUID = 2;
 
@@ -12,7 +12,8 @@ public class UserLogout implements Serializable {
     }
     private final String name;
 
-    public String getName() {
-        return name;
+    @Override
+    public void doOperation(IContext context) {
+        context.onLogoutReact(name);
     }
 }

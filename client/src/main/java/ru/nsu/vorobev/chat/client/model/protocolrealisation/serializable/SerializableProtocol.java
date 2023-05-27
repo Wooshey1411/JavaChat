@@ -1,6 +1,5 @@
 package ru.nsu.vorobev.chat.client.model.protocolrealisation.serializable;
 
-import ru.nsu.vorobev.chat.client.model.EventHandle;
 import ru.nsu.vorobev.chat.client.model.Model;
 import ru.nsu.vorobev.chat.client.model.exceptions.ProtocolException;
 import ru.nsu.vorobev.chat.client.model.protocolrealisation.Connection;
@@ -12,11 +11,11 @@ import ru.nsu.vorobev.chat.network.protocols.*;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.Objects;
 
 public class SerializableProtocol implements TCPConnectionListener, Connection {
 
     private final Model model;
+    private Context context;
 
     public SerializableProtocol(Model model){
         this.model = model;
@@ -26,6 +25,7 @@ public class SerializableProtocol implements TCPConnectionListener, Connection {
     @Override
     public void connect() throws IOException {
         connection = new TCPConnectionByte(this,new Socket(model.getIpAddress(), model.getPort()));
+        context = new Context(model,connection);
     }
 
     byte[] ConvertObjectToByte(Object o){
@@ -61,58 +61,10 @@ public class SerializableProtocol implements TCPConnectionListener, Connection {
     @Override
     public void onReceiveData(TCPConnection tcpConnectionSerializable, byte[] bytes) {
         Object o = ConvertByteToObject(bytes);
-        if(o == null){
+        if(!(o instanceof Operable)){
             return;
         }
-        if (o instanceof MessageAns){
-            if(!((MessageAns) o).isSuccessful()){
-                model.setMsg(((MessageAns) o).getReason());
-                model.onModelChange(EventHandle.MESSAGE_FAILED);
-            } else {
-                model.onModelChange(EventHandle.MESSAGE_SUCCESSFUL);
-            }
-            return;
-        }
-
-        if(o instanceof Message){
-            model.onModelReceive(((Message) o).getName() + ": " + ((Message) o).getMessage());
-            return;
-        }
-
-        if(o instanceof NamesAns){
-            if(!((NamesAns) o).isSuccessful()){
-                model.setMsg(((NamesAns) o).getReason());
-                model.onModelChange(EventHandle.NAMES_REQ_FAILED);
-            } else {
-                model.setUsersList(((NamesAns) o).getNames());
-                model.onModelChange(EventHandle.NAMES_REQ_SUCCESSFUL);
-            }
-            return;
-        }
-        if(o instanceof UserLogin){
-            if(Objects.equals(((UserLogin) o).getName(), model.getName())){
-                return;
-            }
-            model.getUsersList().add(((UserLogin) o).getName());
-            model.setMsg(((UserLogin) o).getName());
-            model.onModelChange(EventHandle.USER_LOGIN);
-            return;
-        }
-        if(o instanceof UserLogout){
-            model.getUsersList().remove(((UserLogout) o).getName());
-            model.setMsg(((UserLogout) o).getName());
-            model.onModelChange(EventHandle.USER_LOGOUT);
-            return;
-        }
-        if(o instanceof DisconnectAns){
-            if (((DisconnectAns) o).isSuccessful()){
-                connection.disconnect();
-                model.onModelChange(EventHandle.DISCONNECT);
-            } else {
-                model.setError(((DisconnectAns) o).getReason());
-                model.onModelChange(EventHandle.ERROR);
-            }
-        }
+        ((Operable) o).doOperation(context);
     }
 
     @Override

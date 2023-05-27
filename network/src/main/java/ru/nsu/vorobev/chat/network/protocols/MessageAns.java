@@ -1,9 +1,8 @@
 package ru.nsu.vorobev.chat.network.protocols;
-
 import java.io.Serial;
 import java.io.Serializable;
 
-public class MessageAns implements Serializable {
+public class MessageAns implements Serializable,Operable {
 
     @Serial
     private static final long serialVersionUID = 5;
@@ -11,14 +10,11 @@ public class MessageAns implements Serializable {
         this.reason = reason;
         this.isSuccessful = isSuccessful;
     }
-    private boolean isSuccessful;
-    private String reason;
+    private final boolean isSuccessful;
+    private final String reason;
 
-    public String getReason() {
-        return reason;
-    }
-
-    public boolean isSuccessful() {
-        return isSuccessful;
+    @Override
+    public void doOperation(IContext context) {
+        context.onMessageAnsReact(isSuccessful,reason);
     }
 }
