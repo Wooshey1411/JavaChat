@@ -9,17 +9,11 @@ import ru.nsu.vorobev.chat.server.ChatServer;
 
 import java.io.*;
 import java.net.ServerSocket;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 public class SerializableProtocol implements TCPConnectionListener,Connection {
 
     private static int ID = 0;
-
-    private final List<User> users = new ArrayList<>();
-    private final List<Message> messagesHistory = new ArrayList<>();
-
     private final ChatServer server;
 
     private final int port;
@@ -77,17 +71,17 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
 
         String name = null;
         int ID = -1;
-        for (User user : users){
-            if(user.getConnection() == tcpConnectionSerializable){
-                name = user.getNickname();
-                ID = user.getID();
+        for (TCPConnection connection : server.getUsers().keySet()){
+            if(connection == tcpConnectionSerializable){
+                name = server.getUsers().get(connection).getNickname();
+                ID = server.getUsers().get(connection).getID();
                 break;
             }
         }
         Log.log(Log.getTime() + ":Client connected. Nickname:" +name + " ID=" + ID, Log.TypeOfLoggers.INFO);
         broadCastMessage(new UserLogin(name));
-        for (Message msg : messagesHistory){
-            tcpConnectionSerializable.sendData(convertObjectToByte(msg));
+        for (MessageType msg : server.getMessages()){
+            tcpConnectionSerializable.sendData(convertObjectToByte(new Message(msg.getMsg(),-1,msg.getSender())));
         }
     }
 
@@ -100,7 +94,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
         if(obj instanceof Message){
             Message BCMessage = null;
             User sender = null;
-            for (User user : users){
+            for (User user : server.getUsers().values()){
                 if(user.getID() == ((Message) obj).getID()){
                     sender = user;
                     BCMessage = new Message(((Message) obj).getMessage(),-1, user.getNickname());
@@ -118,17 +112,17 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
             }
             tcpConnectionSerializable.sendData(convertObjectToByte(new MessageAns(true,null)));
 
-            if(messagesHistory.size() == ChatServer.maxHistoryLen){
-                messagesHistory.remove(0);
+            if(server.getMessages().size() == ChatServer.maxHistoryLen){
+                server.getMessages().remove(0);
             }
-            messagesHistory.add(BCMessage);
+            server.getMessages().add(new MessageType(BCMessage.getMessage(),BCMessage.getName()));
             broadCastMessage(BCMessage);
             Log.log(Log.getTime() + ":Client " + sender.getNickname() + " with ID=" + sender.getID() + " send message \"" + BCMessage.getMessage() + "\"",Log.TypeOfLoggers.INFO);
             return;
         }
         if(obj instanceof NamesReq){
             User sender = null;
-            for (User user : users){
+            for (User user : server.getUsers().values()){
                 if(user.getID() == ((NamesReq) obj).getID()){
                     sender = user;
                 }
@@ -139,7 +133,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
                 return;
             }
             NamesAns ans = new NamesAns(true,null);
-            for (User user : users){
+            for (User user : server.getUsers().values()){
                 ans.addName(user.getNickname());
             }
             tcpConnectionSerializable.sendData(convertObjectToByte(ans));
@@ -147,7 +141,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
         }
         if(obj instanceof DisconnectReq){
             int id = -1;
-            for (User user : users){
+            for (User user : server.getUsers().values()){
                 if(user.getID() == ((DisconnectReq) obj).getID()){
                     id = user.getID();
                     break;
@@ -165,10 +159,10 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     @Override
     public synchronized void onDisconnect(TCPConnection tcpConnectionSerializable) {
         String name = null;
-        for(User user : users){
-            if (tcpConnectionSerializable == user.getConnection()){
-                name = user.getNickname();
-                users.remove(user);
+        for(TCPConnection connection : server.getUsers().keySet()){
+            if (tcpConnectionSerializable == connection){
+                name = server.getUsers().get(connection).getNickname();
+                server.getUsers().remove(connection);
                 break;
             }
         }
@@ -195,7 +189,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
 
         //System.out.println(registrationReceive.msg);
         RegistrationAns registrationReqAns = null;
-        for (User user : users){
+        for (User user : server.getUsers().values()){
             if(Objects.equals(user.getNickname(), registrationReqReceive.getMsg())){
                 registrationReqAns = new RegistrationAns(false,"Exist user with same name",-1);
                 break;
@@ -211,13 +205,13 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
             Log.log(Log.getTime() + ":Client try to connect with exist nickname connection was closed. Nickname:" + registrationReqReceive.getMsg(),Log.TypeOfLoggers.INFO);
             throw new UserWithSameName("Exist user with same name");
         }
-        users.add(new User(tcpConnectionSerializable, registrationReqReceive.getMsg(), registrationReqAns.getID()));
+        server.getUsers().put(tcpConnectionSerializable,new User(registrationReqReceive.getMsg(), registrationReqAns.getID()));
     }
 
     private void broadCastMessage(Object object) {
         //  System.out.println("Broadcast: " + object.toString());
-        for (User user : users) {
-            user.getConnection().sendData(convertObjectToByte(object));
+        for (TCPConnection connection : server.getUsers().keySet()) {
+            connection.sendData(convertObjectToByte(object));
         }
     }
 

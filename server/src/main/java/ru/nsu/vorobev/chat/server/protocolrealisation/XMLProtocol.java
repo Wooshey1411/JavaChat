@@ -22,18 +22,12 @@ import java.io.StringWriter;
 import java.net.ServerSocket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 public class XMLProtocol implements TCPConnectionListener, Connection {
 
     private static int ID = 0;
-
-    private final List<User> users = new ArrayList<>();
-
-    private final List<String> messagesHistory = new ArrayList<>();
-
+    private final ChatServer server;
     private final DocumentBuilder builder;
 
     final DOMImplementationRegistry registry;
@@ -44,8 +38,9 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
 
     private final int port;
 
-    public XMLProtocol(int port) {
+    public XMLProtocol(int port, ChatServer server) {
         this.port = port;
+        this.server = server;
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         try {
             builder = factory.newDocumentBuilder();
@@ -85,9 +80,25 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
 
     private synchronized void broadCastMessage(String msg) {
         //  System.out.println("Broadcast: " + object.toString());
-        for (User user : users) {
-            user.getConnection().sendData(msg.getBytes());
+        for (TCPConnection connection : server.getUsers().keySet()) {
+            connection.sendData(msg.getBytes());
         }
+    }
+
+    private String getMessage(String message, String sender){
+        Document BCMessage = builder.newDocument();
+        Element rootElement = BCMessage.createElement("event");
+        rootElement.setAttribute("name", "message");
+        BCMessage.appendChild(rootElement);
+        Element messageElement = BCMessage.createElement("message");
+        messageElement.setTextContent(message);
+        Element nameElement = BCMessage.createElement("name");
+        nameElement.setTextContent(sender);
+        rootElement.appendChild(messageElement);
+        rootElement.appendChild(nameElement);
+        stringWriter.getBuffer().setLength(0);
+        writer.write(BCMessage, lsOutput);
+        return stringWriter.toString();
     }
 
     @Override
@@ -97,9 +108,9 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         rootElement.setAttribute("name", "userlogin");
         ans.appendChild(rootElement);
         String name = "";
-        for (User user : users) {
-            if (user.getConnection() == tcpConnection) {
-                name = user.getNickname();
+        for (TCPConnection connection : server.getUsers().keySet()) {
+            if (connection == tcpConnection) {
+                name = server.getUsers().get(connection).getNickname();
                 break;
             }
         }
@@ -109,8 +120,8 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
         stringWriter.getBuffer().setLength(0);
         writer.write(ans, lsOutput);
         broadCastMessage(stringWriter.toString());
-        for (String msg : messagesHistory) {
-            tcpConnection.sendData(msg.getBytes());
+        for (MessageType msg : server.getMessages()) {
+            tcpConnection.sendData(getMessage(msg.getMsg(),msg.getSender()).getBytes());
         }
         System.out.println("User connected");
     }
@@ -119,7 +130,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
     private synchronized boolean checkIDAndSendIfWrong(TCPConnection tcpConnection, int ID, String attribute, String reasonS) {
         Document ans = builder.newDocument();
         boolean IDFound = false;
-        for (User user : users) {
+        for (User user : server.getUsers().values()) {
             if (user.getID() == ID) {
                 IDFound = true;
                 break;
@@ -181,7 +192,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                     ans.appendChild(rootElement);
                     Element listusersElement = ans.createElement("listusers");
                     rootElement.appendChild(listusersElement);
-                    for (User user : users) {
+                    for (User user : server.getUsers().values()) {
                         Element userElement = ans.createElement("user");
                         Element nameElement = ans.createElement("name");
                         nameElement.setTextContent(user.getNickname());
@@ -206,30 +217,18 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                     if (checkIDAndSendIfWrong(tcpConnection, ID, "message", "wrong session ID for send message of users")) {
                         return;
                     }
-                    Document BCMessage = builder.newDocument();
-                    Element rootElement = BCMessage.createElement("event");
-                    rootElement.setAttribute("name", "message");
-                    BCMessage.appendChild(rootElement);
-                    Element messageElement = BCMessage.createElement("message");
-                    messageElement.setTextContent(msgElem.getTextContent());
-                    Element nameElement = BCMessage.createElement("name");
                     String senderName = "";
-                    for (User user : users) {
+                    for (User user : server.getUsers().values()) {
                         if (user.getID() == ID) {
                             senderName = user.getNickname();
                             break;
                         }
                     }
-                    nameElement.setTextContent(senderName);
-                    rootElement.appendChild(messageElement);
-                    rootElement.appendChild(nameElement);
-                    stringWriter.getBuffer().setLength(0);
-                    writer.write(BCMessage, lsOutput);
-                    String msg = stringWriter.toString();
-                    if (messagesHistory.size() == ChatServer.maxHistoryLen) {
-                        messagesHistory.remove(0);
+                    String msg = getMessage(msgElem.getTextContent(),senderName);
+                    if (server.getMessages().size() == ChatServer.maxHistoryLen) {
+                        server.getMessages().remove(0);
                     }
-                    messagesHistory.add(msg);
+                    server.getMessages().add(new MessageType(msgElem.getTextContent(),senderName));
                     broadCastMessage(msg);
                     sendSuccess(tcpConnection, "message");
                 }
@@ -252,10 +251,10 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
     @Override
     public synchronized void onDisconnect(TCPConnection tcpConnectionSerializable) {
         String name = null;
-        for (User user : users) {
-            if (tcpConnectionSerializable == user.getConnection()) {
-                name = user.getNickname();
-                users.remove(user);
+        for (TCPConnection connection : server.getUsers().keySet()) {
+            if (tcpConnectionSerializable == connection) {
+                name = server.getUsers().get(connection).getNickname();
+                server.getUsers().remove(connection);
                 break;
             }
         }
@@ -310,7 +309,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
             }
             Document doc = builder.newDocument();
 
-            for (User user : users) {
+            for (User user : server.getUsers().values()) {
                 if (Objects.equals(user.getNickname(), userName)) {
 
                     Element rootElement = doc.createElement("error");
@@ -338,7 +337,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
 
             writer.write(doc, lsOutput);
             tcpConnection.sendData(stringWriter.toString().getBytes());
-            users.add(new User(tcpConnection, userName, userID));
+            server.getUsers().put(tcpConnection,new User(userName,userID));
         } catch (SAXException exception) {
             Document document = builder.newDocument();
             Element root = document.createElement("error");

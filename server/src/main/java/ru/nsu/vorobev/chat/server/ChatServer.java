@@ -1,11 +1,9 @@
 package ru.nsu.vorobev.chat.server;
 
+import ru.nsu.vorobev.chat.network.connection.TCPConnection;
 import ru.nsu.vorobev.chat.server.configparser.BadConfigException;
 import ru.nsu.vorobev.chat.server.configparser.ConfigParser;
-import ru.nsu.vorobev.chat.server.protocolrealisation.Connection;
-import ru.nsu.vorobev.chat.server.protocolrealisation.SerializableProtocol;
-import ru.nsu.vorobev.chat.server.protocolrealisation.User;
-import ru.nsu.vorobev.chat.server.protocolrealisation.XMLProtocol;
+import ru.nsu.vorobev.chat.server.protocolrealisation.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,8 +14,8 @@ public class ChatServer {
 
     public static final int maxHistoryLen = 5;
     private Connection connection;
-    private HashMap<User,Connection> users = new HashMap<>();
-    private List<String> messages = new ArrayList<>();
+    private final HashMap<TCPConnection,User> users = new HashMap<>();
+    private final List<MessageType> messages = new ArrayList<>();
 
     public ChatServer(){
         try(ConfigParser parser = new ConfigParser()){
@@ -27,7 +25,7 @@ public class ChatServer {
             }
             String protocol = parser.getStrByName("protocol");
             switch (protocol){
-                case "XML" -> connection = new XMLProtocol(port);
+                case "XML" -> connection = new XMLProtocol(port,this);
                 case "Serializable" -> connection = new SerializableProtocol(port,this);
                 default -> throw new BadConfigException("Such protocol doesn't exist!");
             }
@@ -39,11 +37,11 @@ public class ChatServer {
         connection.start();
     }
 
-    public List<String> getMessages() {
+    public List<MessageType> getMessages() {
         return messages;
     }
 
-    public HashMap<User, Connection> getUsers() {
+    public HashMap<TCPConnection, User> getUsers() {
         return users;
     }
 }
