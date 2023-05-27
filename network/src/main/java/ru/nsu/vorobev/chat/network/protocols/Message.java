@@ -11,9 +11,9 @@ public class Message implements Serializable {
         this.message = message;
         this.ID = ID;
     }
-    private String message;
-    private int ID;
-    private String name;
+    private final String message;
+    private final int ID;
+    private final String name;
     public String getMessage() {
         return message;
     }

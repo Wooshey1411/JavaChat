@@ -4,8 +4,8 @@ package ru.nsu.vorobev.chat.client.model;
 import ru.nsu.vorobev.chat.client.model.configparser.BadConfigException;
 import ru.nsu.vorobev.chat.client.model.exceptions.SocketException;
 import ru.nsu.vorobev.chat.client.model.protocolrealisation.Connection;
-//import ru.nsu.vorobev.chat.client.model.protocolrealisation.SerializableProtocol;
-import ru.nsu.vorobev.chat.client.model.protocolrealisation.SerializableProtocol;
+//import ru.nsu.vorobev.chat.client.model.protocolrealisation.serializable.SerializableProtocol;
+import ru.nsu.vorobev.chat.client.model.protocolrealisation.serializable.SerializableProtocol;
 import ru.nsu.vorobev.chat.client.model.protocolrealisation.XMLProtocol;
 
 import java.io.IOException;

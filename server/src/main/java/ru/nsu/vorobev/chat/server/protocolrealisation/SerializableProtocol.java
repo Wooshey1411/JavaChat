@@ -20,10 +20,13 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     private final List<User> users = new ArrayList<>();
     private final List<Message> messagesHistory = new ArrayList<>();
 
+    private final ChatServer server;
+
     private final int port;
 
-    public SerializableProtocol(int port){
+    public SerializableProtocol(int port, ChatServer server){
         this.port = port;
+        this.server = server;
     }
 
     byte[] convertObjectToByte(Object o){
@@ -142,19 +145,19 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
             tcpConnectionSerializable.sendData(convertObjectToByte(ans));
             Log.log(Log.getTime() + ":Client " + sender.getNickname() + " with ID=" + sender.getID() + " send request of names successfully",Log.TypeOfLoggers.INFO);
         }
-        if(obj instanceof Disconnect){
+        if(obj instanceof DisconnectReq){
             int id = -1;
             for (User user : users){
-                if(user.getID() == ((Disconnect) obj).getID()){
+                if(user.getID() == ((DisconnectReq) obj).getID()){
                     id = user.getID();
                     break;
                 }
             }
             if(id == -1){
-                tcpConnectionSerializable.sendData(convertObjectToByte(new Disconnect(false,"Wrong session ID",0)));
+                tcpConnectionSerializable.sendData(convertObjectToByte(new DisconnectAns("Wrong session ID",false)));
                 return;
             }
-            tcpConnectionSerializable.sendData(convertObjectToByte(new Disconnect(true,"null",0)));
+            tcpConnectionSerializable.sendData(convertObjectToByte(new DisconnectAns(null,true)));
         }
 
     }
@@ -180,33 +183,35 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
 
     @Override
     public void onRegistration(TCPConnection tcpConnectionSerializable) throws IOException, ClassNotFoundException {
-        Registration registrationReceive;
+        RegistrationReq registrationReqReceive;
         try {
-            registrationReceive = (Registration) convertByteToObject(tcpConnectionSerializable.receiveData());
+            registrationReqReceive = (RegistrationReq) convertByteToObject(tcpConnectionSerializable.receiveData());
         } catch (ClassNotFoundException ex){
-            tcpConnectionSerializable.sendData(convertObjectToByte(new Registration(false, -1,"wrong protocol")));
+            tcpConnectionSerializable.sendData(convertObjectToByte(new RegistrationAns(false, "wrong protocol",-1)));
             tcpConnectionSerializable.disconnect();
             Log.log(Log.getTime() + ":TCPConnection try to connect with wrong protocol " + tcpConnectionSerializable, Log.TypeOfLoggers.WARNING);
             throw new ClassNotFoundException("Wrong protocol");
         }
 
         //System.out.println(registrationReceive.msg);
-        Registration registrationAns = new Registration(true,ID++,null);
+        RegistrationAns registrationReqAns = null;
         for (User user : users){
-            if(Objects.equals(user.getNickname(), registrationReceive.getMsg())){
-                registrationAns.setSuccessful(false);
-                registrationAns.setMsg("Exist user with same name");
+            if(Objects.equals(user.getNickname(), registrationReqReceive.getMsg())){
+                registrationReqAns = new RegistrationAns(false,"Exist user with same name",-1);
                 break;
             }
         }
+        if(registrationReqAns == null){
+            registrationReqAns = new RegistrationAns(true,null,ID++);
+        }
         //tcpConnectionSerializable.getOut().writeObject(registrationAns);
-        tcpConnectionSerializable.sendData(convertObjectToByte(registrationAns));
+        tcpConnectionSerializable.sendData(convertObjectToByte(registrationReqAns));
        // tcpConnectionSerializable.getOut().flush();
-        if(!registrationAns.isSuccessful()){
-            Log.log(Log.getTime() + ":Client try to connect with exist nickname connection was closed. Nickname:" + registrationReceive.getMsg(),Log.TypeOfLoggers.INFO);
+        if(!registrationReqAns.isSuccessful()){
+            Log.log(Log.getTime() + ":Client try to connect with exist nickname connection was closed. Nickname:" + registrationReqReceive.getMsg(),Log.TypeOfLoggers.INFO);
             throw new UserWithSameName("Exist user with same name");
         }
-        users.add(new User(tcpConnectionSerializable, registrationReceive.getMsg(),registrationAns.getID()));
+        users.add(new User(tcpConnectionSerializable, registrationReqReceive.getMsg(), registrationReqAns.getID()));
     }
 
     private void broadCastMessage(Object object) {

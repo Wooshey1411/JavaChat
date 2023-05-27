@@ -1,8 +1,9 @@
-package ru.nsu.vorobev.chat.client.model.protocolrealisation;
+package ru.nsu.vorobev.chat.client.model.protocolrealisation.serializable;
 
 import ru.nsu.vorobev.chat.client.model.EventHandle;
 import ru.nsu.vorobev.chat.client.model.Model;
 import ru.nsu.vorobev.chat.client.model.exceptions.ProtocolException;
+import ru.nsu.vorobev.chat.client.model.protocolrealisation.Connection;
 import ru.nsu.vorobev.chat.network.connection.TCPConnection;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionByte;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionListener;
@@ -13,7 +14,7 @@ import java.io.*;
 import java.net.Socket;
 import java.util.Objects;
 
-public class SerializableProtocol implements TCPConnectionListener,Connection {
+public class SerializableProtocol implements TCPConnectionListener, Connection {
 
     private final Model model;
 
@@ -24,7 +25,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     private TCPConnectionByte connection;
     @Override
     public void connect() throws IOException {
-        connection = new TCPConnectionByte(SerializableProtocol.this,new Socket(model.getIpAddress(), model.getPort()));
+        connection = new TCPConnectionByte(this,new Socket(model.getIpAddress(), model.getPort()));
     }
 
     byte[] ConvertObjectToByte(Object o){
@@ -103,12 +104,12 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
             model.onModelChange(EventHandle.USER_LOGOUT);
             return;
         }
-        if(o instanceof Disconnect){
-            if (((Disconnect) o).getSuccessful()){
+        if(o instanceof DisconnectAns){
+            if (((DisconnectAns) o).isSuccessful()){
                 connection.disconnect();
                 model.onModelChange(EventHandle.DISCONNECT);
             } else {
-                model.setError(((Disconnect) o).getReason());
+                model.setError(((DisconnectAns) o).getReason());
                 model.onModelChange(EventHandle.ERROR);
             }
         }
@@ -125,13 +126,13 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
     }
     @Override
     public void onRegistration(TCPConnection tcpConnectionSerializable) throws IOException {
-        Registration registrationReq = new Registration(false,-1, model.getName());
+        RegistrationReq registrationReq = new RegistrationReq(-1, model.getName());
 
         tcpConnectionSerializable.sendData(ConvertObjectToByte(registrationReq));
 
-        Registration registrationAns;
+        RegistrationAns registrationAns;
         try {
-            registrationAns = (Registration) ConvertByteToObject(tcpConnectionSerializable.receiveData());
+            registrationAns = (RegistrationAns) ConvertByteToObject(tcpConnectionSerializable.receiveData());
         } catch (ClassNotFoundException ex){
             model.setError("Wrong protocol");
             throw new ProtocolException("Wrong protocol");
@@ -139,8 +140,8 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
 
         if(!registrationAns.isSuccessful()){
             tcpConnectionSerializable.disconnect();
-            model.setError(registrationAns.getMsg());
-            throw new UserWithSameName(registrationAns.getMsg());
+            model.setError(registrationAns.getMessage());
+            throw new UserWithSameName(registrationAns.getMessage());
         }
 
         model.setID(registrationAns.getID());
@@ -157,7 +158,7 @@ public class SerializableProtocol implements TCPConnectionListener,Connection {
 
     @Override
     public void disconnectRequest() {
-        connection.sendData(ConvertObjectToByte(new Disconnect(true,null, model.getID())));
+        connection.sendData(ConvertObjectToByte(new DisconnectReq(model.getID())));
     }
 
 }

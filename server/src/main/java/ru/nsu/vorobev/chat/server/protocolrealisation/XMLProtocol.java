@@ -202,7 +202,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                     if (msgElem == null || sessionElem == null) {
                         return;
                     }
-                    ID = Integer.parseInt(sessionElem.getTextContent());
+                    int ID = Integer.parseInt(sessionElem.getTextContent());
                     if (checkIDAndSendIfWrong(tcpConnection, ID, "message", "wrong session ID for send message of users")) {
                         return;
                     }
