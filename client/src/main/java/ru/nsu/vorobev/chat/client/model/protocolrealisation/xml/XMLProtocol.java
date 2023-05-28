@@ -1,4 +1,4 @@
-package ru.nsu.vorobev.chat.client.model.protocolrealisation;
+package ru.nsu.vorobev.chat.client.model.protocolrealisation.xml;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -10,8 +10,11 @@ import org.w3c.dom.ls.LSOutput;
 import org.w3c.dom.ls.LSSerializer;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
-import ru.nsu.vorobev.chat.client.model.EventHandle;
 import ru.nsu.vorobev.chat.client.model.Model;
+import ru.nsu.vorobev.chat.client.model.protocolrealisation.Connection;
+import ru.nsu.vorobev.chat.client.model.protocolrealisation.xml.factory.Context;
+import ru.nsu.vorobev.chat.client.model.protocolrealisation.xml.factory.Factory;
+import ru.nsu.vorobev.chat.client.model.protocolrealisation.xml.factory.Operable;
 import ru.nsu.vorobev.chat.network.connection.TCPConnection;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionByte;
 import ru.nsu.vorobev.chat.network.connection.TCPConnectionListener;
@@ -27,9 +30,6 @@ import java.net.ProtocolException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 
 public class XMLProtocol implements TCPConnectionListener, Connection {
 
@@ -42,12 +42,15 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
     final LSSerializer writer;
     LSOutput lsOutput;
     StringWriter stringWriter = new StringWriter();
+    private Context context;
 
+    private final Factory operatorsFactory;
 
 
     public XMLProtocol(Model model) {
         this.model = model;
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        operatorsFactory = new Factory();
         try {
             builder = factory.newDocumentBuilder();
             registry = DOMImplementationRegistry.newInstance();
@@ -68,6 +71,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
     @Override
     public void connect() throws IOException {
         connection = new TCPConnectionByte(XMLProtocol.this, new Socket(model.getIpAddress(), model.getPort()));
+        context = new Context(model,connection);
     }
 
     @Override
@@ -146,98 +150,27 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
             String r = new String(o, StandardCharsets.UTF_8);
             Document reqv = builder.parse(new InputSource(new StringReader(r)));
             Element reqvElement = (Element) reqv.getElementsByTagName("success").item(0);
+            context.setDoc(reqv);
             if(reqvElement != null){
                 String name = reqvElement.getAttribute("name");
-                switch (name) {
-                    case "list" -> {
-                        Element listUsersElem = (Element) reqv.getElementsByTagName("listusers").item(0);
-                        if (listUsersElem == null) {
-                            return;
-                        }
-                        NodeList nodeList = listUsersElem.getChildNodes();
-                        List<String> users = new ArrayList<>();
-                        for (int i = 0; i < nodeList.getLength(); i++) {
-                            if (nodeList.item(i).getNodeType() == Node.ELEMENT_NODE) {
-                                Element userName = (Element) nodeList.item(i).getFirstChild();
-                                users.add(userName.getTextContent());
-                            }
-                        }
-                        model.setUsersList(users);
-                        model.onModelChange(EventHandle.NAMES_REQ_SUCCESSFUL);
-                    }
-                    case "message" -> model.onModelChange(EventHandle.MESSAGE_SUCCESSFUL);
-                    case "logout" -> {
-                        connection.disconnect();
-                        model.onModelChange(EventHandle.DISCONNECT);
-                    }
-                }
-
+                Operable operator = operatorsFactory.getOperator(name + "success");
+                operator.doOperation(context);
                 return;
             }
-
 
             reqvElement = (Element) reqv.getElementsByTagName("error").item(0);
             if(reqvElement != null) {
                 String name = reqvElement.getAttribute("name");
-                switch (name) {
-                    case "list" -> {
-                        NodeList nodeList = reqvElement.getChildNodes();
-                        for (int i = 0; i < nodeList.getLength(); i++) {
-                            if (nodeList.item(i).getNodeType() == Node.ELEMENT_NODE) {
-                                model.setMsg(nodeList.item(i).getTextContent());
-                                break;
-                            }
-                        }
-                        model.onModelChange(EventHandle.NAMES_REQ_FAILED);
-                    }
-                    case "message" -> model.onModelChange(EventHandle.MESSAGE_FAILED);
-                    case "logout" -> {
-                        Element reasonElem = (Element) reqv.getElementsByTagName("reason").item(0);
-                        model.setError(reasonElem.getTextContent());
-                        model.onModelChange(EventHandle.ERROR);
-                    }
-                }
+                Operable operator = operatorsFactory.getOperator(name + "error");
+                operator.doOperation(context);
+                return;
             }
 
             reqvElement = (Element) reqv.getElementsByTagName("event").item(0);
             if(reqvElement != null){
                 String name = reqvElement.getAttribute("name");
-                switch (name) {
-                    case "message" -> {
-                        Element messageElem = (Element) reqv.getElementsByTagName("message").item(0);
-                        Element nameElem = (Element) reqv.getElementsByTagName("name").item(0);
-                        if (messageElem == null || nameElem == null) {
-                            return;
-                        }
-                        model.onModelReceive(nameElem.getTextContent() + ": " + messageElem.getTextContent());
-                    }
-                    case "userlogin" -> {
-                        Element nameElem = (Element) reqv.getElementsByTagName("name").item(0);
-                        if (nameElem == null) {
-                            return;
-                        }
-                        String userName = nameElem.getTextContent();
-                        if(Objects.equals(userName, model.getName())){
-                            return;
-                        }
-                        model.getUsersList().add(userName);
-                        model.setMsg(userName);
-                        model.onModelChange(EventHandle.USER_LOGIN);
-                    }
-                    case "userlogout" -> {
-                        Element nameElem = (Element) reqv.getElementsByTagName("name").item(0);
-                        if (nameElem == null) {
-                            return;
-                        }
-                        String userName = nameElem.getTextContent();
-                        if(Objects.equals(userName, model.getName())){
-                            return;
-                        }
-                        model.getUsersList().remove(userName);
-                        model.setMsg(userName);
-                        model.onModelChange(EventHandle.USER_LOGOUT);
-                    }
-                }
+                Operable operator = operatorsFactory.getOperator(name + "event");
+                operator.doOperation(context);
             }
 
         } catch (IOException | SAXException ex){
@@ -272,7 +205,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
                 NodeList nodeList = ansElement.getChildNodes();
                 for (int i = 0; i <nodeList.getLength(); i++){
                     if(nodeList.item(i).getNodeType() == Node.ELEMENT_NODE){
-                        model.onModelReceive(nodeList.item(i).getTextContent());
+                        model.setError(nodeList.item(i).getTextContent());
                         throw new UserWithSameName("Exists user with same nickname");
                     }
                 }

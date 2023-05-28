@@ -1,1 +1,1 @@
-protocol=Serializable
+protocol=XML

@@ -6,7 +6,7 @@ import ru.nsu.vorobev.chat.client.model.exceptions.SocketException;
 import ru.nsu.vorobev.chat.client.model.protocolrealisation.Connection;
 //import ru.nsu.vorobev.chat.client.model.protocolrealisation.serializable.SerializableProtocol;
 import ru.nsu.vorobev.chat.client.model.protocolrealisation.serializable.SerializableProtocol;
-import ru.nsu.vorobev.chat.client.model.protocolrealisation.XMLProtocol;
+import ru.nsu.vorobev.chat.client.model.protocolrealisation.xml.XMLProtocol;
 
 import java.io.IOException;
 import java.util.ArrayList;
