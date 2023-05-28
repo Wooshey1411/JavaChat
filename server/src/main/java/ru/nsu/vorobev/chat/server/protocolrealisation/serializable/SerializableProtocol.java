@@ -34,8 +34,6 @@ public class SerializableProtocol implements TCPConnectionListener, Connection {
     @Override
     public void start(){
         System.out.println("Server running...");
-        Log.enableLogger();
-        Log.init();
         Log.log(Log.getTime() + ":Server start working",Log.TypeOfLoggers.INFO);
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             while (true) {

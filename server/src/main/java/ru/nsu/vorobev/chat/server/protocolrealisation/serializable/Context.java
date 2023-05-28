@@ -79,8 +79,10 @@ public class Context implements IContextServer {
         }
         if(id == -1){
             connection.sendData(Utils.convertObjectToByte(new DisconnectAns("Wrong session ID",false)));
+            Log.log(Log.getTime() + ":Client " + connection + " try to disconnect with nonexistent ID",Log.TypeOfLoggers.WARNING);
             return;
         }
         connection.sendData(Utils.convertObjectToByte(new DisconnectAns(null,true)));
+        Log.log(Log.getTime() + ":Client with ID=" + id + " successfully send disconnect request",Log.TypeOfLoggers.INFO);
     }
 }

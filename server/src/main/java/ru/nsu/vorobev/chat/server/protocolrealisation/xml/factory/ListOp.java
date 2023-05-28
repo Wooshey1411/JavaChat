@@ -5,9 +5,9 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import ru.nsu.vorobev.chat.network.connection.TCPConnection;
+import ru.nsu.vorobev.chat.server.protocolrealisation.Log;
 import ru.nsu.vorobev.chat.server.protocolrealisation.User;
 import ru.nsu.vorobev.chat.server.protocolrealisation.xml.Utils;
-import ru.nsu.vorobev.chat.server.protocolrealisation.xml.factory.IContext;
 
 class ListOp implements Operable{
 
@@ -22,6 +22,7 @@ class ListOp implements Operable{
             }
         }
         if (Utils.checkIDAndSendIfWrong(context,connection, ID, "list", "wrong session ID for get list of users")) {
+            Log.log(Log.getTime() + ":Client send request of names with nonexistent ID. TCPConnection:" + connection,Log.TypeOfLoggers.INFO);
             return;
         }
         Document ans = context.getBuilder().newDocument();
@@ -44,5 +45,6 @@ class ListOp implements Operable{
         context.getWriter().write(ans, context.getLSOutput());
         String ansS = context.getStringWriter().toString();
         connection.sendData(ansS.getBytes());
+        Log.log(Log.getTime() + ":Client with ID=" + ID + " send request of names successfully",Log.TypeOfLoggers.INFO);
     }
 }

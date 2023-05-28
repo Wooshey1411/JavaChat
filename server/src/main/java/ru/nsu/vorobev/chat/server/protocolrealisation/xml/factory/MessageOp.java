@@ -3,6 +3,7 @@ package ru.nsu.vorobev.chat.server.protocolrealisation.xml.factory;
 import org.w3c.dom.Element;
 import ru.nsu.vorobev.chat.network.connection.TCPConnection;
 import ru.nsu.vorobev.chat.server.ChatServer;
+import ru.nsu.vorobev.chat.server.protocolrealisation.Log;
 import ru.nsu.vorobev.chat.server.protocolrealisation.MessageType;
 import ru.nsu.vorobev.chat.server.protocolrealisation.User;
 import ru.nsu.vorobev.chat.server.protocolrealisation.xml.Utils;
@@ -17,6 +18,7 @@ public class MessageOp implements Operable{
         }
         int ID = Integer.parseInt(sessionElem.getTextContent());
         if (Utils.checkIDAndSendIfWrong(context,connection, ID, "message", "wrong session ID for send message of users")) {
+            Log.log(Log.getTime() + ":Client try to send message with nonexistent ID. TCPConnection:" + connection,Log.TypeOfLoggers.INFO);
             return;
         }
         String senderName = "";
@@ -32,6 +34,7 @@ public class MessageOp implements Operable{
         }
         context.getServer().getMessages().add(new MessageType(msgElem.getTextContent(),senderName));
         Utils.broadCastMessage(context,msg);
+        Log.log(Log.getTime() + ":Client " + senderName + " with ID=" + ID + " send message \"" + msgElem.getTextContent() + "\"",Log.TypeOfLoggers.INFO);
         Utils.sendSuccess(context,connection, "message");
     }
 }

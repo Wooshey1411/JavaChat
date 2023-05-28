@@ -26,6 +26,8 @@ public class ChatServer {
                 throw new BadConfigException("port must be 0-65535");
             }
             String protocol = parser.getStrByName("protocol");
+            Log.init();
+            Log.enableLogger();
             switch (protocol){
                 case "XML" -> connection = new XMLProtocol(port,this);
                 case "Serializable" -> connection = new SerializableProtocol(port,this);
