@@ -17,7 +17,7 @@ class ListOp implements Operable{
         int ID = -1;
         for (int i = 0; i < nodeList.getLength(); i++) {
             if (nodeList.item(i).getNodeType() == Node.ELEMENT_NODE) {
-                ID = Integer.parseInt(nodeList.item(i).getTextContent());
+                ID = Integer.parseInt(nodeList.item(i).getTextContent().strip());
                 break;
             }
         }

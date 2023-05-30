@@ -9,7 +9,7 @@ public class LogoutOp implements Operable{
     @Override
     public void doOperation(IContext context, TCPConnection connection) {
         Element sessionElem = (Element) context.getDocument().getElementsByTagName("session").item(0);
-        int id = Integer.parseInt(sessionElem.getTextContent());
+        int id = Integer.parseInt(sessionElem.getTextContent().strip());
         if (Utils.checkIDAndSendIfWrong(context,connection, id, "logout", "Wrong session ID")) {
             Log.log(Log.getTime() + ":Client " + connection + " try to disconnect with nonexistent ID",Log.TypeOfLoggers.WARNING);
             return;

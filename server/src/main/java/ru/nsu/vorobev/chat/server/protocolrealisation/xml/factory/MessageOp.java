@@ -16,7 +16,7 @@ public class MessageOp implements Operable{
         if (msgElem == null || sessionElem == null) {
             return;
         }
-        int ID = Integer.parseInt(sessionElem.getTextContent());
+        int ID = Integer.parseInt(sessionElem.getTextContent().strip());
         if (Utils.checkIDAndSendIfWrong(context,connection, ID, "message", "wrong session ID for send message of users")) {
             Log.log(Log.getTime() + ":Client try to send message with nonexistent ID. TCPConnection:" + connection,Log.TypeOfLoggers.INFO);
             return;

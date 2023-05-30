@@ -115,6 +115,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
     public synchronized void onReceiveData(TCPConnection tcpConnection, byte[] obj) {
 
         try {
+            System.out.println((new String(obj, StandardCharsets.UTF_8)));
             Document reqv = builder.parse(new InputSource(new StringReader(new String(obj, StandardCharsets.UTF_8))));
             Element reqvElement = (Element) reqv.getElementsByTagName("command").item(0);
             String name = reqvElement.getAttribute("name");
@@ -166,7 +167,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
             if(in == null){
                 throw new SAXException();
             }
-
+           // System.out.println((new String(in, StandardCharsets.UTF_8)));
             Document answer = builder.parse(new InputSource(new StringReader(new String(in, StandardCharsets.UTF_8))));
             System.out.println("Got data");
             Element ansElement = (Element) answer.getElementsByTagName("command").item(0);
@@ -183,7 +184,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
             NodeList nodeList = ansElement.getChildNodes();
             for (int i = 0; i < nodeList.getLength(); i++) {
                 if (nodeList.item(i).getNodeType() == Node.ELEMENT_NODE) {
-                    userName = nodeList.item(i).getTextContent();
+                    userName = nodeList.item(i).getTextContent().strip();
                     break;
                 }
             }
@@ -218,6 +219,7 @@ public class XMLProtocol implements TCPConnectionListener, Connection {
 
             writer.write(doc, lsOutput);
             tcpConnection.sendData(stringWriter.toString().getBytes());
+            Log.log(Log.getTime() + ":Client connected. Nickname:" + userName + " ID=" + userID,Log.TypeOfLoggers.INFO);
             server.getUsers().put(tcpConnection,new User(userName,userID));
         } catch (SAXException exception) {
             Document document = builder.newDocument();
